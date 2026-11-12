@@ -1,0 +1,304 @@
+// Skema basis data Openspace (PostgreSQL + Prisma ORM)
+// Mengikuti kelompok data pada Tabel 2.4 laporan.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+// ---------- Akun dan workspace ----------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  title        String?
+  avatarColor  String   @default("#2563EB")
+  avatarUrl    String?
+  notifyAssign Boolean  @default(true)
+  notifyComment Boolean @default(true)
+  notifyDeadline Boolean @default(true)
+  createdAt    DateTime @default(now())
+
+  workspaces      Workspace[]           @relation("WorkspaceOwner")
+  memberships     ProjectMember[]
+  ownedProjects   Project[]             @relation("ProjectOwner")
+  assignments     TaskAssignee[]
+  comments        TaskComment[]
+  links           TaskLink[]
+  notifications   Notification[]
+  resetTokens     PasswordResetToken[]
+  meetingSeats    MeetingParticipant[]
+  ownedMilestones Milestone[]           @relation("MilestoneOwner")
+  actionItems     ActionItem[]
+}
+
+model Workspace {
+  id        String    @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User      @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  createdAt DateTime  @default(now())
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ---------- Proyek dan keanggotaan ----------
+
+model Project {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User      @relation("ProjectOwner", fields: [ownerId], references: [id])
+  name        String
+  description String?
+  color       String    @default("#2563EB")
+  icon        String    @default("asterisk")
+  dueDate     DateTime?
+  position    Int       @default(0)
+  archivedAt  DateTime?
+  taskCounter Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  members     ProjectMember[]
+  invitations Invitation[]
+  roles       Role[]
+  tasks       Task[]
+  milestones  Milestone[]
+  meetings    Meeting[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  lastActiveAt DateTime @default(now())
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model Invitation {
+  id        String           @id @default(cuid())
+  projectId String
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  email     String
+  roleId    String
+  role      Role             @relation(fields: [roleId], references: [id])
+  tokenHash String           @unique
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+}
+
+// ---------- Role dan izin (RBAC per proyek) ----------
+
+model Role {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isOwner     Boolean          @default(false)
+  isBuiltIn   Boolean          @default(false)
+  permissions RolePermission[]
+  members     ProjectMember[]
+  invitations Invitation[]
+  createdAt   DateTime         @default(now())
+
+  @@unique([projectId, name])
+}
+
+model Permission {
+  key         String           @id
+  label       String
+  description String
+  group       String
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId        String
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionKey String
+  permission    Permission @relation(fields: [permissionKey], references: [key])
+
+  @@id([roleId, permissionKey])
+}
+
+// ---------- Pekerjaan ----------
+
+model Milestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  dueDate     DateTime?
+  ownerId     String?
+  owner       User?     @relation("MilestoneOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  tasks       Task[]
+  createdAt   DateTime  @default(now())
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number      Int
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  startDate   DateTime?
+  dueDate     DateTime?
+  position    Int          @default(0)
+  milestoneId String?
+  milestone   Milestone?   @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  createdById String?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  assignees     TaskAssignee[]
+  prerequisites TaskPrerequisite[] @relation("TaskWaits")
+  dependents    TaskPrerequisite[] @relation("TaskUnblocks")
+  comments      TaskComment[]
+  links         TaskLink[]
+  actionItem    ActionItem?
+
+  @@unique([projectId, number])
+}
+
+model TaskAssignee {
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+}
+
+// taskId menunggu prerequisiteId selesai terlebih dahulu
+model TaskPrerequisite {
+  taskId         String
+  task           Task     @relation("TaskWaits", fields: [taskId], references: [id], onDelete: Cascade)
+  prerequisiteId String
+  prerequisite   Task     @relation("TaskUnblocks", fields: [prerequisiteId], references: [id], onDelete: Restrict)
+  createdAt      DateTime @default(now())
+
+  @@id([taskId, prerequisiteId])
+}
+
+// ---------- Kolaborasi pada tugas ----------
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model TaskLink {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  url       String
+  addedById String
+  addedBy   User     @relation(fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// ---------- Rapat ----------
+
+model Meeting {
+  id           String               @id @default(cuid())
+  projectId    String
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  date         DateTime
+  startTime    String
+  endTime      String
+  location     String?
+  notes        String?
+  participants MeetingParticipant[]
+  actionItems  ActionItem[]
+  createdAt    DateTime             @default(now())
+}
+
+model MeetingParticipant {
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, userId])
+}
+
+model ActionItem {
+  id         String    @id @default(cuid())
+  meetingId  String
+  meeting    Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title      String
+  assigneeId String?
+  assignee   User?     @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  dueDate    DateTime?
+  taskId     String?   @unique
+  task       Task?     @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  createdAt  DateTime  @default(now())
+}
+
+// ---------- Pemberitahuan ----------
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
