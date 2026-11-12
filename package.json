@@ -1,0 +1,26 @@
+{
+  "name": "openspace",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Openspace: Sistem Manajemen Proyek dan Alur Kerja Terintegrasi (Capstone RPL Kelompok 3)",
+  "scripts": {
+    "setup": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "db:reset": "npm run db:reset --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "lint": "eslint backend frontend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:studio": "npm run db:studio --prefix backend"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^10.0.7",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.0"
+  },
+  "type": "module"
+}
