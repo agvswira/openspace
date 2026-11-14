@@ -317,6 +317,8 @@ export function WorkspaceSettings() {
   const { data: archived = [] } = useProjects(true);
   const [ws, setWs] = useState(workspace?.name ?? '');
   const [profile, setProfile] = useState({ name: user.name, email: user.email, title: user.title ?? '' });
+  const [currentPassword, setCurrentPassword] = useState('');
+  const emailChanged = profile.email.trim().toLowerCase() !== user.email;
   const [prefs, setPrefs] = useState(user.preferences);
   const saveWs = useApiMutation((name) => api.patch(`/workspaces/${workspace.id}`, { name }), {
     onSuccess: () => {
@@ -394,7 +396,10 @@ export function WorkspaceSettings() {
         className="settings-section"
         onSubmit={(e) => {
           e.preventDefault();
-          saveProfile.mutate({ ...profile, title: profile.title || null });
+          saveProfile.mutate(
+            { ...profile, title: profile.title || null, ...(emailChanged && { currentPassword }) },
+            { onSuccess: () => setCurrentPassword('') },
+          );
         }}
       >
         <div>
@@ -466,6 +471,18 @@ export function WorkspaceSettings() {
               onChange={(e) => setProfile({ ...profile, email: e.target.value })}
             />
           </Field>
+          {emailChanged && (
+            <Field label="Current password" htmlFor="pf-current-password" hint="Required to change your email.">
+              <input
+                id="pf-current-password"
+                type="password"
+                className="input"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+            </Field>
+          )}
           <FormError message={saveProfile.error && errorMessage(saveProfile.error)} />
           <div style={{ textAlign: 'right' }}>
             <button className="btn btn-primary" disabled={saveProfile.isPending}>

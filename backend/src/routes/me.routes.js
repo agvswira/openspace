@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma.js';
 import { validate } from '../middleware/validate.js';
-import { conflict, forbidden, notFound } from '../lib/http.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/http.js';
 import { serializeTask, taskInclude, publicUser } from '../lib/serialize.js';
 import { startOfToday } from '../lib/taskRules.js';
 
@@ -23,14 +24,20 @@ const profileSchema = z.object({
   notifyAssign: z.boolean().optional(),
   notifyComment: z.boolean().optional(),
   notifyDeadline: z.boolean().optional(),
+  // Wajib saat mengganti email, karena email dipakai untuk reset password dan menerima undangan.
+  currentPassword: z.string().optional(),
 });
 
 router.patch('/me', validate(profileSchema), async (req, res) => {
-  if (req.body.email && req.body.email !== req.user.email) {
-    const taken = await prisma.user.findUnique({ where: { email: req.body.email } });
+  const { currentPassword, ...data } = req.body;
+  if (data.email && data.email !== req.user.email) {
+    if (!currentPassword || !(await bcrypt.compare(currentPassword, req.user.passwordHash))) {
+      throw badRequest('Masukkan password saat ini yang benar untuk mengganti email.');
+    }
+    const taken = await prisma.user.findUnique({ where: { email: data.email } });
     if (taken) throw conflict('Email sudah dipakai akun lain.');
   }
-  const u = await prisma.user.update({ where: { id: req.user.id }, data: req.body });
+  const u = await prisma.user.update({ where: { id: req.user.id }, data });
   res.json({
     ...publicUser(u),
     preferences: { notifyAssign: u.notifyAssign, notifyComment: u.notifyComment, notifyDeadline: u.notifyDeadline },

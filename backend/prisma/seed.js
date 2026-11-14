@@ -16,6 +16,11 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const short = (d) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 
 async function main() {
+  // Seed menghapus seluruh data, jadi ditolak di production agar akun asli tidak hilang.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Seed tidak boleh dijalankan saat NODE_ENV=production karena akan menghapus semua data.');
+  }
+
   // Bersihkan data lama (urutan memperhatikan relasi Restrict).
   await prisma.actionItem.deleteMany();
   await prisma.taskPrerequisite.deleteMany();
