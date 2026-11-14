@@ -11,7 +11,8 @@
     "db:seed": "node prisma/seed.js",
     "db:reset": "node scripts/dev.js --reset --no-server",
     "prisma:generate": "prisma generate",
-    "db:studio": "node scripts/studio.js"
+    "db:studio": "node scripts/studio.js",
+    "db:sync-permissions": "node scripts/sync-permissions.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
