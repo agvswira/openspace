@@ -6,7 +6,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 }
 
 export const config = {
-  port: Number(process.env.API_PORT || 4000),
+  // Layanan hosting seperti Render menentukan port lewat PORT.
+  port: Number(process.env.PORT || process.env.API_PORT || 4000),
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5180',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
