@@ -96,11 +96,12 @@ projectMembersRouter.post('/invitations', projectAccess(), requireOwner, validat
 
   const invitedUser = await prisma.user.findUnique({ where: { email } });
   if (invitedUser) {
+    // Token tidak dicantumkan di notifikasi: email akun belum diverifikasi, jadi tautan undangan
+    // hanya dikirim ke kotak masuk alamat yang diundang.
     await notify([invitedUser.id], {
       type: 'invite',
       title: `Undangan ke ${req.access.project.name}`,
-      body: `${req.user.name} mengundang Anda sebagai ${role.name}.`,
-      link: `/invite/${token}`,
+      body: `${req.user.name} mengundang Anda sebagai ${role.name}. Buka tautan di email ${email} untuk bergabung.`,
     });
   }
   res
