@@ -9,8 +9,25 @@ import { createOneTimeToken, hashToken } from '../lib/tokens.js';
 import { sendMail } from '../lib/mailer.js';
 import { config } from '../config.js';
 import { publicUser } from '../lib/serialize.js';
+import { rateLimit } from '../lib/rateLimit.js';
 
 const router = Router();
+const emailKey = (req) => req.body.email;
+
+// Batasi tebakan password per akun dan spam email reset per alamat.
+const loginLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  key: emailKey,
+  message: 'Terlalu banyak percobaan login untuk email ini. Coba lagi dalam 15 menit.',
+});
+const forgotLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  key: emailKey,
+  message: 'Tautan reset sudah dikirim beberapa kali. Coba lagi dalam 1 jam.',
+});
+
 const AVATAR_COLORS = ['#2563EB', '#EA580C', '#16A34A', '#9333EA', '#DB2777', '#0891B2'];
 
 const registerSchema = z.object({
@@ -43,13 +60,14 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password wajib diisi.'),
 });
 
-router.post('/login', validate(loginSchema), async (req, res) => {
+router.post('/login', validate(loginSchema), loginLimit, async (req, res) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({ where: { email } });
   // Pesan sama untuk email/password salah agar tidak membocorkan email terdaftar.
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw unauthorized('Email atau password salah.');
   }
+  loginLimit.reset(email);
   res.json({ token: signToken(user), user: publicUser(user) });
 });
 
@@ -72,6 +90,7 @@ router.get('/me', requireAuth, async (req, res) => {
 router.post(
   '/forgot-password',
   validate(z.object({ email: z.string().trim().toLowerCase().email('Format email tidak valid.') })),
+  forgotLimit,
   async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email: req.body.email } });
     if (user) {
