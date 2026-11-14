@@ -12,7 +12,8 @@
     "db:reset": "node scripts/dev.js --reset --no-server",
     "prisma:generate": "prisma generate",
     "db:studio": "node scripts/studio.js",
-    "db:sync-permissions": "node scripts/sync-permissions.js"
+    "db:sync-permissions": "node scripts/sync-permissions.js",
+    "vercel-build": "prisma generate && prisma migrate deploy && node scripts/sync-permissions.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
