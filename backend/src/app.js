@@ -39,3 +39,6 @@ export function createApp() {
   app.use(errorHandler);
   return app;
 }
+
+// Vercel menjalankan aplikasi Express dari default export file ini sebagai satu fungsi serverless.
+export default createApp();
