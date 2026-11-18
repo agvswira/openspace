@@ -11,6 +11,7 @@ import {
   Settings2,
   Shield,
   Users,
+  UserMinus,
 } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import { keys, projectTaskKeys, useApiMutation, useMembers, useProject, useRoles } from '../api/hooks';
@@ -18,6 +19,7 @@ import { Avatar, ConfirmDialog, ErrorState, Field, FormError, LoadingBlock, Menu
 import { diffDays, timeAgo } from '../lib/format';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useMenuBinder } from '../components/ui/ContextMenu';
 
 function RemoveMemberModal({ projectId, member, members, onClose }) {
   const toast = useToast();
@@ -95,6 +97,7 @@ export default function Members() {
   const [removing, setRemoving] = useState(null);
   const [transfer, setTransfer] = useState(null);
   const isOwner = project?.access?.isOwner;
+  const bindMenu = useMenuBinder();
   const inv = [keys.members(projectId), keys.roles(projectId), keys.project(projectId)];
 
   const changeRole = useApiMutation(({ id, roleId }) => api.patch(`/projects/${projectId}/members/${id}`, { roleId }), {
@@ -213,7 +216,32 @@ export default function Members() {
               </thead>
               <tbody>
                 {members.map((m) => (
-                  <tr key={m.id}>
+                  <tr
+                    key={m.id}
+                    {...bindMenu(() => [
+                      {
+                        label: 'Copy email',
+                        icon: Mail,
+                        onSelect: () => navigator.clipboard?.writeText(m.user.email),
+                      },
+                      {
+                        label: 'Make owner',
+                        icon: Shield,
+                        disabled: !isOwner || m.role.isOwner,
+                        hint: m.role.isOwner ? 'Sudah menjadi Owner.' : 'Hanya Owner yang dapat mengalihkan kepemilikan.',
+                        onSelect: () => setTransfer(m),
+                      },
+                      { separator: true },
+                      {
+                        label: 'Remove from project',
+                        icon: UserMinus,
+                        danger: true,
+                        disabled: !isOwner || m.role.isOwner,
+                        hint: m.role.isOwner ? 'Owner tidak dapat dikeluarkan.' : 'Hanya Owner yang dapat mengeluarkan anggota.',
+                        onSelect: () => setRemoving(m),
+                      },
+                    ])}
+                  >
                     <td>
                       <div className="row">
                         <Avatar user={m.user} size={32} />

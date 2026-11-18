@@ -28,6 +28,8 @@ import NotificationsMenu from './NotificationsMenu';
 import NewProjectModal from './NewProjectModal';
 import InviteModal from '../InviteModal';
 import { ThemeSwitcher, ThemeToggleButton } from '../ThemeSwitcher';
+import { useMenuBinder } from '../ui/ContextMenu';
+import { useProjectMenu } from './projectMenu';
 
 const PROJECT_NAV = [
   { to: 'overview', label: 'Overview', Icon: LayoutGrid },
@@ -47,6 +49,8 @@ function Sidebar({ onSearch, onNewProject }) {
   const [expanded, setExpanded] = useState({});
   const isOpen = (id) => expanded[id] ?? id === activeId;
   const navigate = useNavigate();
+  const bind = useMenuBinder();
+  const projectMenu = useProjectMenu();
 
   return (
     <aside className="sidebar" aria-label="Navigasi utama">
@@ -98,6 +102,7 @@ function Sidebar({ onSearch, onNewProject }) {
                 if (p.id !== activeId) navigate(`/projects/${p.id}/overview`);
               }}
               aria-expanded={isOpen(p.id)}
+              {...bind(() => projectMenu(p))}
             >
               <ProjectMark project={p} />
               <span className="grow truncate" style={{ fontWeight: 500 }}>

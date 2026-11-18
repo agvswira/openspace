@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Flag, Plus, MoreHorizontal, Calendar, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Flag, Plus, MoreHorizontal, Calendar, Pencil, Trash2, ArrowLeft, ExternalLink, Link2 } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import {
   keys,
@@ -28,6 +28,7 @@ import { StatusBadge, StatusIcon, displayState } from '../lib/status';
 import { fmtLong, fmtShort, fromInputDate, relativeDue, toInputDate } from '../lib/format';
 import { useCan } from '../components/tasks/TaskDetailPanel';
 import { useToast } from '../context/ToastContext';
+import { useMenuBinder } from '../components/ui/ContextMenu';
 
 function phase(m) {
   if (m.progress.total > 0 && m.progress.done === m.progress.total) return 'completed';
@@ -39,12 +40,28 @@ const SEG = { DONE: '#16a34a', OVERDUE: '#dc2626', BLOCKED: '#d97706', IN_PROGRE
 
 export function MilestoneCard({ m, projectId, canManage, onEdit, onDelete, full }) {
   const navigate = useNavigate();
+  const bind = useMenuBinder();
+  const menu = bind(() => [
+    !full && {
+      label: 'Open milestone',
+      icon: ExternalLink,
+      onSelect: () => navigate(`/projects/${projectId}/milestones/${m.id}`),
+    },
+    { label: 'Edit milestone…', icon: Pencil, disabled: !canManage, hint: 'Role Anda tidak memiliki izin Manage milestones.', onSelect: () => onEdit(m) },
+    {
+      label: 'Copy link',
+      icon: Link2,
+      onSelect: () => navigator.clipboard?.writeText(`${window.location.origin}/projects/${projectId}/milestones/${m.id}`),
+    },
+    { separator: true },
+    { label: 'Delete milestone', icon: Trash2, danger: true, disabled: !canManage, hint: 'Role Anda tidak memiliki izin Manage milestones.', onSelect: () => onDelete(m) },
+  ]);
   // Label mengikuti fase milestone (Figma); risiko ditunjukkan terpisah pada kolom At risk.
   const st = phase(m) === 'completed' ? 'DONE' : phase(m) === 'active' ? 'IN_PROGRESS' : 'TODO';
   const people = [...new Map(m.tasks.flatMap((t) => t.assignees).map((u) => [u.id, u])).values()];
 
   return (
-    <article className="card">
+    <article className="card" {...menu}>
       <div className="card-pad">
         <div className="row">
           <span className="stat-ic" style={{ background: 'var(--purple-bg)', color: 'var(--purple)' }}>

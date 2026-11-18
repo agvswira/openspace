@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { Plus, MoreHorizontal, Calendar, Paperclip, MessageCircle, Lock } from 'lucide-react';
+import { Plus, Calendar, Paperclip, MessageCircle, Lock } from 'lucide-react';
 import { AvatarStack } from '../ui';
+import { MoreButton, useMenuBinder } from '../ui/ContextMenu';
 import { STATUS, STATUS_ORDER, PriorityFlag, StatusIcon } from '../../lib/status';
 import { fmtShort } from '../../lib/format';
+import QuickAdd from './QuickAdd';
 
-export function TaskCard({ task, onOpen, draggable, onDragStart, onDragEnd, dragging }) {
+// Kartu tugas. Klik = buka detail, klik kanan / tekan lama / "..." = menu aksi,
+// Enter = buka, Delete = hapus (lewat item menu yang sama sehingga izin tetap dicek).
+export function TaskCard({ task, onOpen, menuFor, draggable, onDragStart, onDragEnd, dragging }) {
   const overdue = task.isOverdue;
+  const bind = useMenuBinder();
+  const menu = bind(menuFor && (() => menuFor(task)));
   return (
     <article
       className={`task-card ${dragging ? 'dragging' : ''}`}
@@ -14,8 +20,17 @@ export function TaskCard({ task, onOpen, draggable, onDragStart, onDragEnd, drag
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onOpen(task.id)}
       aria-label={task.title}
+      {...menu}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter') onOpen(task.id);
+        if (e.key === 'Delete' && menuFor) {
+          const del = menuFor(task).find((i) => i.label === 'Delete task');
+          if (del && !del.disabled) del.onSelect();
+        }
+        menu.onKeyDown?.(e);
+      }}
     >
       <div className="row-between">
         <span className={`mono row ${overdue ? 'st-OVERDUE' : 'muted'}`} style={{ gap: 5 }}>
@@ -23,7 +38,14 @@ export function TaskCard({ task, onOpen, draggable, onDragStart, onDragEnd, drag
           {task.dueDate ? fmtShort(task.dueDate) : 'No date'}
           {overdue && ' · Overdue'}
         </span>
-        <MoreHorizontal size={15} className="faint" />
+        {menuFor && (
+          <MoreButton
+            className="icon-btn card-more"
+            size={15}
+            label={`Menu ${task.title}`}
+            getItems={() => menuFor(task)}
+          />
+        )}
       </div>
       <div>
         <div className="task-card-title">{task.title}</div>
@@ -64,14 +86,22 @@ export function TaskCard({ task, onOpen, draggable, onDragStart, onDragEnd, drag
 }
 
 // Board: tugas per status. Kartu dapat diseret antar kolom untuk mengubah status.
-export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate }) {
+export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, menuFor, onQuickAdd }) {
   const [dragId, setDragId] = useState(null);
   const [over, setOver] = useState(null);
+  const bind = useMenuBinder();
 
   return (
     <div className="board">
       {STATUS_ORDER.map((status) => {
         const items = tasks.filter((t) => t.status === status);
+        // Klik kanan di area kosong kolom: buat tugas baru di kolom ini.
+        const colMenu = bind(
+          canCreate &&
+            (() => [
+              { label: `New task in ${STATUS[status].label}…`, icon: Plus, onSelect: () => onCreate(status) },
+            ]),
+        );
         return (
           <section key={status} aria-label={STATUS[status].label}>
             <div className={`col-head bg-${status}`}>
@@ -90,6 +120,7 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate }
             </div>
             <div
               className={`col-body ${over === status ? 'drop' : ''}`}
+              {...colMenu}
               onDragOver={(e) => {
                 e.preventDefault();
                 setOver(status);
@@ -107,6 +138,7 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate }
                   key={t.id}
                   task={t}
                   onOpen={onOpen}
+                  menuFor={menuFor}
                   draggable
                   dragging={dragId === t.id}
                   onDragStart={() => setDragId(t.id)}
@@ -121,6 +153,7 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate }
                   No tasks
                 </p>
               )}
+              {onQuickAdd && <QuickAdd onSubmit={(title) => onQuickAdd(status, title)} />}
             </div>
           </section>
         );

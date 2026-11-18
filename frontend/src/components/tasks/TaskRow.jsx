@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Check, MoreHorizontal, ExternalLink, CircleCheck, RotateCcw } from 'lucide-react';
+import { Calendar, Check, MoreHorizontal, ExternalLink, CircleCheck, RotateCcw, Link2 } from 'lucide-react';
 import { api, errorMessage } from '../../api/client';
 import { projectTaskKeys, useApiMutation } from '../../api/hooks';
 import { ConfirmDialog, Menu, ProjectMark } from '../ui';
 import { PriorityFlag, StatusBadge, StatusIcon, displayState } from '../../lib/status';
 import { fmtShort } from '../../lib/format';
 import { useToast } from '../../context/ToastContext';
+import { useMenuBinder } from '../ui/ContextMenu';
 
 // Baris tugas pada Home dan My tasks (Figma): checkbox selesai, judul, proyek, status, tanggal, prioritas.
 export default function TaskRow({ task, showMilestone = false, showMenu = false }) {
@@ -22,9 +23,22 @@ export default function TaskRow({ task, showMilestone = false, showMenu = false 
     onSuccess: (_d, status) => toast(status === 'DONE' ? 'Tugas ditandai selesai' : 'Tugas dibuka kembali'),
   });
   const setDone = (value) => toggle.mutate(value ? 'DONE' : 'TODO', { onError: (e) => setRejected(errorMessage(e)) });
+  const bind = useMenuBinder();
+  const menu = bind(() => [
+    { label: 'Open task', icon: ExternalLink, onSelect: open },
+    { label: done ? 'Mark as not done' : 'Mark as done', icon: done ? RotateCcw : CircleCheck, onSelect: () => setDone(!done) },
+    {
+      label: 'Copy link',
+      icon: Link2,
+      onSelect: () => {
+        navigator.clipboard?.writeText(`${window.location.origin}/projects/${task.projectId}/tasks?task=${task.id}`);
+        toast('Tautan disalin');
+      },
+    },
+  ]);
 
   return (
-    <div className="list-row clickable task-row" onClick={open}>
+    <div className="list-row clickable task-row" onClick={open} {...menu}>
       <button
         type="button"
         className={`task-check ${done ? 'checked' : ''}`}

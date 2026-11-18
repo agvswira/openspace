@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Users, Flag } from 'lucide-react';
 import { AvatarStack } from '../ui';
+import { useMenuBinder } from '../ui/ContextMenu';
 import { StatusBadge, StatusIcon, displayState } from '../../lib/status';
 import { addDays, fmtDow, monthName, sameDay, startOfDay } from '../../lib/format';
 
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // Calendar: tugas (pada deadline), rapat, dan milestone ditampilkan pada tanggalnya.
-export default function CalendarView({ tasks, meetings = [], milestones = [], onOpen }) {
+export default function CalendarView({ tasks, meetings = [], milestones = [], onOpen, menuFor }) {
+  const bind = useMenuBinder();
+  const menuOf = (id) => {
+    const t = tasks.find((x) => x.id === id);
+    return bind(menuFor && t && (() => menuFor(t)));
+  };
   const [cursor, setCursor] = useState(() => startOfDay());
   const [mode, setMode] = useState('month');
   const today = startOfDay();
@@ -100,6 +106,7 @@ export default function CalendarView({ tasks, meetings = [], milestones = [], on
                       className={`cal-ev bg-${ev.state} st-${ev.state}`}
                       style={{ border: 'none', textAlign: 'left' }}
                       onClick={() => onOpen(ev.id)}
+                      {...menuOf(ev.id)}
                       title={ev.title}
                     >
                       <StatusIcon status={ev.state} size={11} />
@@ -148,6 +155,7 @@ export default function CalendarView({ tasks, meetings = [], milestones = [], on
               textAlign: 'left',
             }}
             onClick={() => onOpen(t.id)}
+            {...menuOf(t.id)}
           >
             <div style={{ width: 34, textAlign: 'center' }}>
               <div className="xs muted">{fmtDow(t.dueDate)}</div>

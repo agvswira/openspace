@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, MoreHorizontal } from 'lucide-react';
 
 /**
  * Menu klik kanan (context menu) untuk seluruh aplikasi.
@@ -74,6 +74,33 @@ export function contextMenuProps(openMenu, getItems) {
   };
 }
 
+// Hook praktis: bind(getItems) menghasilkan props pemicu; tanpa getItems tidak ada menu.
+export function useMenuBinder() {
+  const openMenu = useContextMenu();
+  return (getItems) => (getItems ? contextMenuProps(openMenu, getItems) : {});
+}
+
+// Tombol "..." yang membuka menu yang sama dengan klik kanan, tepat di bawah tombol.
+export function MoreButton({ getItems, label = 'Menu', size = 16, className = 'icon-btn' }) {
+  const openMenu = useContextMenu();
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-label={label}
+      aria-haspopup="menu"
+      onClick={(e) => {
+        e.stopPropagation();
+        const r = e.currentTarget.getBoundingClientRect();
+        openMenu(r.right - 210, r.bottom + 4, getItems());
+      }}
+      onKeyDown={(e) => e.key === 'Enter' && e.stopPropagation()}
+    >
+      <MoreHorizontal size={size} />
+    </button>
+  );
+}
+
 function MenuSurface({ x, y, items, onClose, nested = false, parentRef }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ left: x, top: y, ready: false });
@@ -116,7 +143,7 @@ function MenuSurface({ x, y, items, onClose, nested = false, parentRef }) {
     const it = items[i];
     if (!it || it.disabled || it.separator || it.heading) return;
     if (it.submenu) {
-      const r = ref.current.querySelectorAll('[data-idx]')[actionable.indexOf(i)]?.getBoundingClientRect();
+      const r = ref.current.querySelector(`[data-i="${i}"]`)?.getBoundingClientRect();
       if (r) setSub({ index: i, x: r.right + 2, y: r.top - 4, w: r.width });
       return;
     }
@@ -145,7 +172,6 @@ function MenuSurface({ x, y, items, onClose, nested = false, parentRef }) {
     }
   };
 
-  let n = -1;
   return (
     <div
       ref={ref}
@@ -164,12 +190,11 @@ function MenuSurface({ x, y, items, onClose, nested = false, parentRef }) {
               {it.heading}
             </div>
           );
-        n += 1;
         const Icon = it.icon;
         return (
           <button
             key={i}
-            data-idx={n}
+            data-i={i}
             type="button"
             role="menuitem"
             aria-haspopup={it.submenu ? 'menu' : undefined}

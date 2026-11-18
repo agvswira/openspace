@@ -211,7 +211,7 @@ export function Menu({ trigger, children, align = 'right', width }) {
   }, [open]);
 
   useLayoutEffect(() => {
-    if (!open) return setPos(null);
+    if (!open) return undefined;
     const place = () => {
       const r = ref.current?.getBoundingClientRect();
       const pop = popRef.current;
@@ -237,7 +237,13 @@ export function Menu({ trigger, children, align = 'right', width }) {
 
   return (
     <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
-      {trigger({ open, toggle: () => setOpen((o) => !o) })}
+      {trigger({
+        open,
+        toggle: () => {
+          setPos(null);
+          setOpen((o) => !o);
+        },
+      })}
       {open &&
         createPortal(
           <div

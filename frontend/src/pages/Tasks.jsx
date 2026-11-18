@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useSearchParams, useOutletContext } from 'react-router-dom';
-import { Kanban, List, Calendar, GanttChart, Search, SlidersHorizontal, Plus, UserPlus, X } from 'lucide-react';
+import { Kanban, List, Calendar, GanttChart, Search, SlidersHorizontal, Plus, UserPlus, X, Eye } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import { projectTaskKeys, useApiMutation, useMeetings, useMilestones, useProject, useTasks } from '../api/hooks';
 import { AvatarStack, ConfirmDialog, EmptyState, ErrorState, LoadingBlock, Menu } from '../components/ui';
@@ -13,6 +13,7 @@ import CalendarView from '../components/tasks/CalendarView';
 import TimelineView from '../components/tasks/TimelineView';
 import TaskFormModal from '../components/tasks/TaskFormModal';
 import TaskDetailPanel, { useCan } from '../components/tasks/TaskDetailPanel';
+import { useTaskActions } from '../components/tasks/taskActions';
 
 const VIEWS = [
   { key: 'board', label: 'Board', Icon: Kanban },
@@ -54,9 +55,12 @@ export default function Tasks() {
     setParams(next, { replace: k === 'task' ? false : true });
   };
 
+  const actions = useTaskActions(projectId, { onOpen: (id) => setParam('task', id) });
+
   // FR-16: filter dijalankan di sisi klien di atas data yang sama untuk keempat tampilan.
-  const tasks = useMemo(() => {
-    let list = tasksQ.data ?? [];
+  // Tugas yang disembunyikan atau sedang menunggu dihapus (masih bisa Undo) tidak ditampilkan.
+  const tasks = (() => {
+    let list = actions.filterVisible(tasksQ.data ?? []);
     if (q.trim())
       list = list.filter((t) => `${t.title} ${t.description ?? ''}`.toLowerCase().includes(q.toLowerCase()));
     if (filters.mine) list = list.filter((t) => t.assignees.some((a) => a.id === user.id));
@@ -64,7 +68,8 @@ export default function Tasks() {
     if (filters.blocked) list = list.filter((t) => t.isBlocked && t.status !== 'DONE');
     if (filters.priority) list = list.filter((t) => t.priority === filters.priority);
     return list;
-  }, [tasksQ.data, q, filters, user.id]);
+  })();
+  const hiddenCount = (tasksQ.data ?? []).filter((t) => actions.hiddenIds.includes(t.id)).length;
   const activeFilters = Object.values(filters).filter(Boolean).length;
 
   const move = useApiMutation(({ task, status }) => api.patch(`/tasks/${task.id}`, { status }), {
@@ -76,7 +81,25 @@ export default function Tasks() {
   const all = tasksQ.data ?? [];
   const done = all.filter((t) => t.status === 'DONE').length;
   const canCreate = can('CREATE_TASKS');
-  const viewProps = { tasks, onOpen: (id) => setParam('task', id), onCreate: (s) => setCreating(s), canCreate };
+  // Tambah cepat: cukup judul, tugas langsung dibuat di kolom/grup status yang dipilih.
+  const quickAdd = useApiMutation((body) => api.post(`/projects/${projectId}/tasks`, body), {
+    invalidate: projectTaskKeys(projectId),
+    onSuccess: () => toast('Tugas dibuat'),
+  });
+  const onQuickAdd = (status, title) =>
+    quickAdd.mutateAsync({ title, status }).catch((e) => {
+      setRejected(errorMessage(e));
+      throw e;
+    });
+  const viewProps = {
+    tasks,
+    onOpen: (id) => setParam('task', id),
+    onCreate: (s) => setCreating(s),
+    canCreate,
+    menuFor: actions.itemsFor,
+    onQuickAdd: canCreate ? onQuickAdd : null,
+    bulk: actions,
+  };
 
   return (
     <div className="page-wide">
@@ -137,7 +160,7 @@ export default function Tasks() {
               <button className="btn" onClick={toggle} style={{ height: 32 }}>
                 <SlidersHorizontal size={14} />
                 Filter
-                {activeFilters ? ` · ${activeFilters}` : ''}
+                {activeFilters + (actions.hideDone ? 1 : 0) ? ` · ${activeFilters + (actions.hideDone ? 1 : 0)}` : ''}
               </button>
             )}
           >
@@ -168,6 +191,15 @@ export default function Tasks() {
                   </option>
                 ))}
               </select>
+              <div className="menu-sep" />
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={actions.hideDone}
+                  onChange={(e) => actions.setHideDone(e.target.checked)}
+                />
+                Hide completed tasks
+              </label>
               {activeFilters > 0 && (
                 <button
                   className="btn btn-sm"
@@ -210,6 +242,25 @@ export default function Tasks() {
               Tidak ada tugas yang cocok dengan pencarian/filter.
             </p>
           )}
+          {(hiddenCount > 0 || actions.hideDone) && (
+            <div className="hidden-bar sm muted">
+              <Eye size={14} />
+              {hiddenCount > 0 && `${hiddenCount} task${hiddenCount > 1 ? 's' : ''} hidden`}
+              {hiddenCount > 0 && actions.hideDone && ' · '}
+              {actions.hideDone && 'Completed tasks hidden'}
+              <span className="grow" />
+              {hiddenCount > 0 && (
+                <button className="link xs" onClick={actions.showHidden}>
+                  Show hidden
+                </button>
+              )}
+              {actions.hideDone && (
+                <button className="link xs" onClick={() => actions.setHideDone(false)}>
+                  Show completed
+                </button>
+              )}
+            </div>
+          )}
           {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
           {view === 'list' && <ListView {...viewProps} />}
           {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
@@ -219,6 +270,7 @@ export default function Tasks() {
       {creating && <TaskFormModal projectId={projectId} defaultStatus={creating} onClose={() => setCreating(null)} />}
       {openTaskId && <TaskDetailPanel taskId={openTaskId} projectId={projectId} onClose={() => setParam('task', '')} />}
       {rejected && <ConfirmDialog title="Perubahan ditolak" message={rejected} onClose={() => setRejected(null)} />}
+      {actions.dialogs}
     </div>
   );
 }
