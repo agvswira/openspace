@@ -2626,3 +2626,16 @@ html.theme-anim *::after {
     scroll-behavior: auto !important;
   }
 }
+
+/* Pilihan tema di dalam menu akun: dibagi rata selebar menu agar tidak melewati sidebar */
+.popover .segmented {
+  display: flex;
+  width: 100%;
+}
+.popover .segmented button {
+  flex: 1;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
+  min-width: 0;
+}

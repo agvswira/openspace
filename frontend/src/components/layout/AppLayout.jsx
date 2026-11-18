@@ -146,7 +146,7 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
         </NavLink>
         <Menu
           align="left"
-          width={256}
+          width="100%"
           trigger={({ toggle }) => (
             <button className="account" onClick={toggle}>
               <Avatar user={user} size={30} />
