@@ -92,7 +92,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
 
   // ---- Rentang tanggal = dari tugas paling awal sampai tugas paling akhir ----
   // Timeline hanya bisa digeser sejauh tanggal yang memang berisi tugas (dan milestone), ditambah
-  // 1 hari ruang di tiap sisi. Tugas baru atau bar yang diseret keluar rentang otomatis
+  // 1 hari ruang di tiap sisi. Tugas baru atau bar yang dipindah keluar rentang otomatis
   // memperluas rentang. Bila rentang lebih pendek dari 14 hari, rentang dilebarkan ke kedua sisi
   // agar grid tetap memenuhi panel.
   let minS = null;
@@ -101,8 +101,11 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     if (!minS || a < minS) minS = a;
     if (!maxE || b > maxE) maxE = b;
   };
+  // Rentang dihitung dari jadwal tersimpan (bukan pratinjau seretan), sehingga tetap diam selama
+  // bar diseret. Bar boleh melewati ujung (tooltip menunjukkan tanggalnya); rentang melebar
+  // setelah bar dilepas dan jadwal baru tersimpan.
   rows.forEach((t) => {
-    const sp = effSpan(t);
+    const sp = pendingDates[t.id] || spanOf(t);
     include(sp.s, sp.e);
   });
   milestones.filter((m) => m.dueDate).forEach((m) => include(startOfDay(m.dueDate), startOfDay(m.dueDate)));
@@ -232,7 +235,9 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     setDrag({
       mode,
       task,
-      scroll0: boxRef.current.scrollLeft,
+      // Tanggal (ms) di bawah pointer saat mulai menyeret. Pergeseran dihitung dalam tanggal,
+      // bukan piksel, sehingga tetap benar walau rentang/scroll timeline berubah saat menyeret.
+      t0: startMs + ((e.clientX - rect.left) / DAY_W) * DAY_MS,
       x0: e.clientX,
       y0: e.clientY,
       dx: 0,
@@ -253,8 +258,9 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
       const b = box.getBoundingClientRect();
       if (e.clientX < b.left + 40) box.scrollLeft -= 16;
       else if (e.clientX > b.right - 40) box.scrollLeft += 16;
-      const dx = e.clientX - drag.x0 + (box.scrollLeft - drag.scroll0);
-      const moved = drag.moved || Math.hypot(dx, e.clientY - drag.y0) > DRAG_THRESHOLD;
+      const tNow = startMs + ((e.clientX - rect.left) / DAY_W) * DAY_MS;
+      const dx = ((tNow - drag.t0) / DAY_MS) * DAY_W;
+      const moved = drag.moved || Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > DRAG_THRESHOLD;
       let targetId = null;
       if (drag.mode === 'link') {
         const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-task-id]');
@@ -289,15 +295,19 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
       );
     };
     const onKey = (e) => e.key === 'Escape' && setDrag(null);
+    // Gesture dibatalkan sistem (notifikasi, gestur OS): seretan dihentikan tanpa menyimpan.
+    const onCancel = () => setDrag(null);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
       window.removeEventListener('keydown', onKey);
     };
-  }, [drag, DAY_W, tasks, bulk, onOpen]);
+  }, [drag, DAY_W, startMs, tasks, bulk, onOpen]);
 
   const width = SPAN * DAY_W;
   // Tinggi grid minimal setinggi panel (dikurangi header hari) agar tidak ada ruang kosong di bawahnya.
@@ -498,7 +508,15 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
             const c = COLORS[state];
             const active = drag?.task.id === t.id && drag.moved;
             const isTarget = drag?.mode === 'link' && drag.targetId === t.id;
-            const menu = bind(menuFor && (() => menuFor(t)));
+            // Membuka menu (klik kanan / tekan lama) membatalkan seretan, sehingga tekan lama
+            // tidak sekaligus membuka panel detail saat jari diangkat.
+            const menu = bind(
+              menuFor &&
+                (() => {
+                  setDrag(null);
+                  return menuFor(t);
+                }),
+            );
             return (
               <div
                 key={t.id}

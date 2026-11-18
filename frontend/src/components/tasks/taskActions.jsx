@@ -9,20 +9,27 @@ import { ConfirmDialog } from '../ui';
 import { PRIORITY, STATUS, STATUS_ORDER } from '../../lib/status';
 import { useCan } from './TaskDetailPanel';
 import TaskFormModal from './TaskFormModal';
-import { deleteBlocker } from '../../lib/taskGuards';
+import { bulkDeleteBlocker, orderForStatus, prerequisitesFirst } from '../../lib/taskGuards';
 
 const UNDO_MS = 6000;
 
 // Preferensi tampilan per proyek disimpan di perangkat (bukan di server).
+function readStored(key, initial) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw == null ? initial : JSON.parse(raw);
+  } catch {
+    return initial;
+  }
+}
 function useStoredState(key, initial) {
-  const [value, setValue] = useState(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw == null ? initial : JSON.parse(raw);
-    } catch {
-      return initial;
-    }
-  });
+  const [value, setValue] = useState(() => readStored(key, initial));
+  // Pindah proyek (kunci berubah) tanpa remount: muat preferensi milik proyek baru.
+  const [loadedKey, setLoadedKey] = useState(key);
+  if (loadedKey !== key) {
+    setLoadedKey(key);
+    setValue(readStored(key, initial));
+  }
   const set = useCallback(
     (next) =>
       setValue((prev) => {
@@ -66,7 +73,15 @@ export function useTaskActions(projectId, { onOpen } = {}) {
   const commitDelete = useCallback(
     async (ids) => {
       ids.forEach((id) => timers.current.delete(id));
-      const results = await Promise.allSettled(ids.map((id) => api.delete(`/tasks/${id}`)));
+      // Berurutan: tugas lanjutan dihapus lebih dulu agar prasyaratnya tidak lagi tertahan.
+      const results = [];
+      for (const id of ids)
+        results.push(
+          await api.delete(`/tasks/${id}`).then(
+            () => ({ status: 'fulfilled' }),
+            (reason) => ({ status: 'rejected', reason }),
+          ),
+        );
       const failed = results.filter((r) => r.status === 'rejected');
       setPending((p) => p.filter((id) => !ids.includes(id)));
       await refresh();
@@ -77,9 +92,11 @@ export function useTaskActions(projectId, { onOpen } = {}) {
 
   const scheduleDelete = useCallback(
     (tasks) => {
-      const blocked = tasks.map(deleteBlocker).find(Boolean);
+      const blocked = bulkDeleteBlocker(tasks);
       if (blocked) return setRejected({ title: 'Tugas tidak dapat dihapus', message: blocked });
-      const ids = tasks.map((t) => t.id);
+      const ids = prerequisitesFirst(tasks)
+        .reverse()
+        .map((t) => t.id);
       setPending((p) => [...p, ...ids]);
       const timer = setTimeout(() => commitDelete(ids), UNDO_MS);
       ids.forEach((id) => timers.current.set(id, timer));
@@ -88,6 +105,11 @@ export function useTaskActions(projectId, { onOpen } = {}) {
         action: {
           label: 'Undo',
           onClick: () => {
+            // Penghapusan sudah dikirim (mis. pengguna sempat pindah halaman): tidak bisa dibatalkan.
+            if (!ids.some((id) => timers.current.has(id))) {
+              toast('Tugas sudah terhapus dan tidak dapat dikembalikan', 'error');
+              return;
+            }
             clearTimeout(timer);
             ids.forEach((id) => timers.current.delete(id));
             setPending((p) => p.filter((id) => !ids.includes(id)));
@@ -115,9 +137,9 @@ export function useTaskActions(projectId, { onOpen } = {}) {
       map.forEach((t) => clearTimeout(t));
       map.clear();
     };
-    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
     return () => {
-      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
       const ids = [...map.keys()];
       map.forEach((t) => clearTimeout(t));
       map.clear();
@@ -134,7 +156,15 @@ export function useTaskActions(projectId, { onOpen } = {}) {
       .catch(fail(title));
 
   const setStatusMany = async (tasks, status) => {
-    const results = await Promise.allSettled(tasks.map((t) => api.patch(`/tasks/${t.id}`, { status })));
+    // Berurutan sesuai rantai prasyarat di dalam pilihan (lihat orderForStatus).
+    const results = [];
+    for (const t of orderForStatus(tasks, status))
+      results.push(
+        await api.patch(`/tasks/${t.id}`, { status }).then(
+          () => ({ status: 'fulfilled' }),
+          (reason) => ({ status: 'rejected', reason }),
+        ),
+      );
     await refresh();
     const failed = results.filter((r) => r.status === 'rejected');
     const ok = results.length - failed.length;

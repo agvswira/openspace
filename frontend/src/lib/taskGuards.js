@@ -37,3 +37,39 @@ export function scheduleBody(task, mode, next) {
   if (task.dueDate || mode === 'end') body.dueDate = next.e.toISOString();
   return body;
 }
+
+/**
+ * Urutan aman untuk aksi massal pada tugas yang saling berprasyarat (urutan topologis di dalam
+ * pilihan). Prasyarat lebih dulu saat memulai/menyelesaikan; tugas lanjutan lebih dulu saat
+ * membuka kembali (TODO) atau menghapus, karena backend menolak urutan sebaliknya.
+ */
+export function prerequisitesFirst(tasks) {
+  const ids = new Set(tasks.map((t) => t.id));
+  const done = new Set();
+  const out = [];
+  let rest = [...tasks];
+  while (rest.length) {
+    const ready = rest.filter((t) => (t.prerequisites || []).every((p) => !ids.has(p.id) || done.has(p.id)));
+    const batch = ready.length ? ready : rest; // pengaman bila ada siklus (seharusnya tidak terjadi)
+    batch.forEach((t) => {
+      done.add(t.id);
+      out.push(t);
+    });
+    rest = rest.filter((t) => !done.has(t.id));
+  }
+  return out;
+}
+
+export const orderForStatus = (tasks, status) =>
+  status === 'TODO' ? prerequisitesFirst(tasks).reverse() : prerequisitesFirst(tasks);
+
+// Alasan penolakan hapus massal: tugas lanjutan yang ikut dipilih tidak dihitung sebagai penghalang.
+export function bulkDeleteBlocker(tasks) {
+  const ids = new Set(tasks.map((t) => t.id));
+  for (const t of tasks) {
+    const outside = (t.dependents || []).filter((d) => !ids.has(d.id));
+    const msg = deleteBlocker({ ...t, dependents: outside });
+    if (msg) return msg;
+  }
+  return null;
+}

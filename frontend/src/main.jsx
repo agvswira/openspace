@@ -31,7 +31,9 @@ if (document.startViewTransition) {
   document.startViewTransition = (arg) => {
     const t = start(arg);
     const guard = setTimeout(() => t.skipTransition(), 1000);
-    t.finished.finally(() => clearTimeout(guard)).catch(() => {});
+    // Transisi yang dilewati menolak promise ready/finished (AbortError): itu wajar, abaikan.
+    t.ready.catch(() => {});
+    t.finished.catch(() => {}).finally(() => clearTimeout(guard));
     return t;
   };
 }

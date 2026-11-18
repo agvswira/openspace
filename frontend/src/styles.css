@@ -2702,3 +2702,23 @@ html.theme-anim *::after {
   padding: 0 4px;
   min-width: 0;
 }
+
+/* Penanda tugas di luar layar (kanan): efek tekan tetap mempertahankan geser -100% */
+.tl-offscreen.right:active {
+  transform: translateX(-100%) scale(0.96);
+}
+/* Bilah aksi massal: animasi masuk mempertahankan posisi tengah (translateX(-50%)) */
+.bulk-bar {
+  animation: bulk-in 0.18s var(--ease);
+}
+@keyframes bulk-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+@media (max-width: 768px) {
+  .bulk-bar {
+    animation: fade-in 0.18s var(--ease);
+  }
+}

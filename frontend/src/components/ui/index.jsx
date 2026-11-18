@@ -200,13 +200,30 @@ export function Menu({ trigger, children, align = 'right', width }) {
 
   useEffect(() => {
     if (!open) return undefined;
+    const trigger = ref.current;
+    const pop = popRef.current;
     const close = (e) => !ref.current?.contains(e.target) && !popRef.current?.contains(e.target) && setOpen(false);
-    const onKey = (e) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      ref.current?.querySelector('button, [href], input, select')?.focus(); // fokus kembali ke pemicu
+    };
+    // Aksesibilitas: popover dirender di akhir <body>, jadi fokus dipindah ke isi menu agar
+    // Tab/Enter langsung bekerja di dalamnya.
+    const focusTimer = setTimeout(() =>
+      popRef.current
+        ?.querySelector('button:not(:disabled), [href], input, select, textarea')
+        ?.focus({ preventScroll: true }),
+    );
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', onKey);
     return () => {
+      clearTimeout(focusTimer);
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', onKey);
+      // Bila fokus masih di dalam menu saat ditutup (mis. memilih item), kembalikan ke pemicu.
+      if (pop?.contains(document.activeElement) || document.activeElement === document.body)
+        trigger?.querySelector('button, [href], input, select')?.focus({ preventScroll: true });
     };
   }, [open]);
 

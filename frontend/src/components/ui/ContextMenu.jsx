@@ -2,8 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
-// Di ponsel / layar sentuh, menu tampil sebagai panel dari bawah layar (bottom sheet, Figma M Proto).
-const isSheet = () => window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)').matches;
+// Di layar ponsel (<= 768 px, sama dengan breakpoint CSS), menu tampil sebagai panel dari bawah
+// layar (bottom sheet, Figma M Proto). Tablet yang lebih lebar memakai menu melayang biasa.
+const isSheet = () => window.matchMedia('(max-width: 768px)').matches;
+
+// Status tekan lama disimpan per elemen (bukan di variabel render) agar tidak hilang saat
+// komponen di-render ulang di tengah sentuhan, mis. saat timeline digeser.
+const press = new WeakMap();
+const LONG_PRESS_MS = 500;
 
 /**
  * Menu klik kanan (context menu) untuk seluruh aplikasi.
@@ -23,11 +29,21 @@ const Ctx = createContext(() => {});
 
 export function ContextMenuProvider({ children }) {
   const [menu, setMenu] = useState(null); // { x, y, items }
+  const returnFocus = useRef(null);
   const open = useCallback((x, y, items) => {
     const list = (items || []).filter(Boolean);
-    if (list.length) setMenu({ x, y, items: list });
+    if (!list.length) return;
+    returnFocus.current = document.activeElement;
+    setMenu({ x, y, items: list });
   }, []);
-  const close = useCallback(() => setMenu(null), []);
+  const close = useCallback(() => {
+    setMenu(null);
+    // Fokus kembali ke elemen pemicu (keyboard tetap di tempat yang sama setelah menu ditutup).
+    const el = returnFocus.current;
+    const active = document.activeElement;
+    if (el?.focus && document.contains(el) && (active === document.body || active?.closest?.('.ctx-menu')))
+      el.focus({ preventScroll: true });
+  }, []);
   return (
     <Ctx.Provider value={open}>
       {children}
@@ -40,18 +56,17 @@ export const useContextMenu = () => useContext(Ctx);
 
 // Props yang dipasang pada elemen pemicu: klik kanan, tekan lama, dan keyboard.
 export function contextMenuProps(openMenu, getItems) {
-  let timer = null;
-  let start = null;
-  let fired = false; // tekan lama sudah membuka menu: klik setelahnya diabaikan
-  const cancel = () => {
-    clearTimeout(timer);
-    timer = null;
+  const cancel = (el) => {
+    const st = press.get(el);
+    if (st) clearTimeout(st.timer);
   };
   return {
     onContextMenu: (e) => {
       e.preventDefault();
       e.stopPropagation();
-      cancel();
+      cancel(e.currentTarget);
+      // Tekan lama sudah membuka menu (beberapa browser juga mengirim contextmenu): jangan dobel.
+      if (press.get(e.currentTarget)?.fired) return;
       openMenu(e.clientX, e.clientY, getItems());
     },
     onKeyDown: (e) => {
@@ -62,23 +77,35 @@ export function contextMenuProps(openMenu, getItems) {
       }
     },
     onTouchStart: (e) => {
+      // Pemicu terdalam (mis. kartu tugas) mengklaim sentuhan; pemicu luar (kolom) mengabaikannya.
+      if (e.nativeEvent.__ctxClaimed) return;
+      e.nativeEvent.__ctxClaimed = true;
+      const el = e.currentTarget;
+      cancel(el);
       const t = e.touches[0];
-      start = { x: t.clientX, y: t.clientY };
-      fired = false;
-      timer = setTimeout(() => {
-        timer = null;
-        fired = true;
+      const st = { x: t.clientX, y: t.clientY, fired: false, timer: null };
+      st.timer = setTimeout(() => {
+        st.fired = true;
         navigator.vibrate?.(10);
-        openMenu(start.x, start.y, getItems());
-      }, 500);
+        openMenu(st.x, st.y, getItems());
+      }, LONG_PRESS_MS);
+      press.set(el, st);
     },
     onTouchMove: (e) => {
+      const st = press.get(e.currentTarget);
       const t = e.touches[0];
-      if (start && Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) cancel();
+      if (st && !st.fired && Math.hypot(t.clientX - st.x, t.clientY - st.y) > 10) clearTimeout(st.timer);
     },
     onTouchEnd: (e) => {
-      cancel();
-      if (fired) e.preventDefault();
+      const st = press.get(e.currentTarget);
+      if (!st) return;
+      clearTimeout(st.timer);
+      if (st.fired) e.preventDefault(); // tekan lama: klik setelahnya diabaikan
+      press.delete(e.currentTarget);
+    },
+    onTouchCancel: (e) => {
+      cancel(e.currentTarget);
+      press.delete(e.currentTarget);
     },
   };
 }
@@ -99,6 +126,7 @@ export function MoreButton({ getItems, label = 'Menu', size = 16, className = 'i
       aria-label={label}
       aria-haspopup="menu"
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         const r = e.currentTarget.getBoundingClientRect();
         openMenu(r.right - 210, r.bottom + 4, getItems());
@@ -181,7 +209,9 @@ function MenuSurface({ x, y, items: rawItems, onClose, nested = false, parentRef
       setActive(actionable[(pos + 1) % actionable.length]);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActive(actionable[(pos - 1 + actionable.length) % actionable.length]);
+      setActive(
+        pos < 0 ? actionable[actionable.length - 1] : actionable[(pos - 1 + actionable.length) % actionable.length],
+      );
     } else if (e.key === 'Enter' || e.key === ' ' || (e.key === 'ArrowRight' && items[active]?.submenu)) {
       e.preventDefault();
       if (active >= 0) choose(active);

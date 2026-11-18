@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -40,19 +40,28 @@ function readCols() {
 }
 
 // Judul yang dapat diubah langsung: klik dua kali, Enter simpan, Esc batal.
-function InlineTitle({ task, onRename, canEdit }) {
+// Klik sekali pada judul tetap membuka detail, tetapi ditunda sebentar (250 ms) agar klik kedua
+// sempat dikenali sebagai "ganti judul" tanpa panel detail ikut terbuka.
+function InlineTitle({ task, onRename, canEdit, onOpen }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(task.title);
+  const clickTimer = useRef(null);
+  useEffect(() => () => clearTimeout(clickTimer.current), []);
   if (!editing)
     return (
       <div
         style={{ fontWeight: 500 }}
         title={canEdit ? 'Double-click to rename' : undefined}
-        onDoubleClick={(e) => {
-          if (!canEdit) return;
+        onClick={(e) => {
+          if (!canEdit) return; // tanpa izin edit: klik diteruskan ke baris (langsung buka detail)
           e.stopPropagation();
-          setValue(task.title);
-          setEditing(true);
+          clearTimeout(clickTimer.current);
+          if (e.detail >= 2) {
+            setValue(task.title);
+            setEditing(true);
+          } else {
+            clickTimer.current = setTimeout(onOpen, 250);
+          }
         }}
       >
         {task.title}
@@ -99,8 +108,10 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
   };
   const colSpan = 3 + cols.length;
 
-  // Pilihan hanya untuk tugas yang masih tampil (mis. setelah difilter atau dihapus).
-  const selectedTasks = tasks.filter((t) => selected.includes(t.id));
+  // Pilihan hanya untuk tugas yang terlihat: tidak terfilter/terhapus dan grupnya tidak ditutup,
+  // sehingga aksi massal tidak pernah mengenai tugas yang tidak tampak.
+  const shownTasks = tasks.filter((t) => !collapsed[t.status]);
+  const selectedTasks = shownTasks.filter((t) => selected.includes(t.id));
   const isSel = (id) => selected.includes(id);
   const flip = (id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const flipGroup = (items) => {
@@ -158,12 +169,12 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
                   <input
                     type="checkbox"
                     aria-label="Pilih semua tugas"
-                    checked={tasks.length > 0 && selectedTasks.length === tasks.length}
+                    checked={shownTasks.length > 0 && selectedTasks.length === shownTasks.length}
                     ref={(el) =>
-                      el && (el.indeterminate = selectedTasks.length > 0 && selectedTasks.length < tasks.length)
+                      el && (el.indeterminate = selectedTasks.length > 0 && selectedTasks.length < shownTasks.length)
                     }
                     onChange={() =>
-                      selectedTasks.length === tasks.length ? clear() : setSelected(tasks.map((t) => t.id))
+                      selectedTasks.length === shownTasks.length ? clear() : setSelected(shownTasks.map((t) => t.id))
                     }
                   />
                 </th>
@@ -236,7 +247,12 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
                           />
                         </td>
                         <td>
-                          <InlineTitle task={t} onRename={bulk?.rename} canEdit={!!bulk?.canEditAll} />
+                          <InlineTitle
+                            task={t}
+                            onRename={bulk?.rename}
+                            canEdit={!!bulk?.canEditAll}
+                            onOpen={() => onOpen(t.id)}
+                          />
                           {t.description && (
                             <div className="xs muted truncate" style={{ maxWidth: 360 }}>
                               {t.description}

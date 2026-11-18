@@ -8,7 +8,12 @@ export function startOfDay(d = new Date()) {
   x.setHours(0, 0, 0, 0);
   return x;
 }
-export const addDays = (d, n) => new Date(startOfDay(d).getTime() + n * 864e5);
+// Menambah hari menurut kalender (bukan 24 jam tetap) agar tetap benar di zona waktu dengan DST.
+export const addDays = (d, n) => {
+  const x = startOfDay(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
 export const sameDay = (a, b) => a && b && startOfDay(a).getTime() === startOfDay(b).getTime();
 export const diffDays = (a, b) => Math.round((startOfDay(a) - startOfDay(b)) / 864e5);
 
