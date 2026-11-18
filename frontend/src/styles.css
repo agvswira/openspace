@@ -2350,3 +2350,53 @@ p {
     min-height: 40px;
   }
 }
+
+/* ===== Timeline: navigasi dengan geser (touchpad / scrollbar) ===== */
+.timeline {
+  overscroll-behavior-x: contain; /* geser dua jari tidak memicu Back/Forward browser */
+  scrollbar-width: auto;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.timeline:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.timeline::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+.timeline::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid var(--bg-panel);
+}
+.timeline::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+.timeline::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tl-offscreen {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 190px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.tl-offscreen.right {
+  transform: translateX(-100%);
+}
+.tl-offscreen:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}

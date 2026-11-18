@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Diamond, Lock, Unlink, MousePointerClick } from 'lucide-react';
 import { AvatarStack } from '../ui';
 import { useContextMenu, useMenuBinder } from '../ui/ContextMenu';
@@ -9,8 +9,12 @@ import { scheduleBody, shiftSpan, spanOf } from '../../lib/taskGuards';
 const MIN_DAY_W = 56;
 const ROW_H = 36;
 const HEAD_ROW = 34; // baris milestone di atas daftar tugas
-const SPAN = 14;
+const VISIBLE_DAYS = 14; // jumlah hari yang muat di layar; sisanya digeser (scroll)
+const EXTEND = 28; // hari yang ditambahkan saat digeser mendekati ujung rentang
+const EDGE_DAYS = 7; // jarak (hari) dari ujung yang memicu penambahan rentang
+const MAX_DAYS = 730;
 const DRAG_THRESHOLD = 4; // px; di bawah ini dianggap klik biasa
+const DAY_MS = 864e5;
 
 const COLORS = {
   TODO: { bg: 'var(--todo-bg)', border: 'var(--todo-border)' },
@@ -28,7 +32,10 @@ function rangeLabel(a, b) {
 
 /**
  * Timeline: setiap tugas digambar sebagai bar dari tanggal mulai sampai deadline, hubungan
- * prasyarat sebagai garis putus-putus (Gambar 2.14). Interaksi langsung:
+ * prasyarat sebagai garis putus-putus (Gambar 2.14). Navigasi tanggal cukup digeser:
+ * touchpad (dua jari kiri/kanan), scrollbar di bawah, Shift + roda mouse, atau roda mouse
+ * biasa bila tidak ada baris yang perlu di-scroll vertikal. Rentang tanggal bertambah
+ * otomatis saat digeser ke ujung. Interaksi langsung pada bar:
  *  - seret bar            → geser jadwal (mulai & deadline bergeser bersama)
  *  - seret tepi kiri/kanan → ubah tanggal mulai / deadline
  *  - seret titik di ujung kanan bar ke bar lain → bar tujuan menunggu bar asal (prasyarat)
@@ -36,7 +43,13 @@ function rangeLabel(a, b) {
  * Semua perubahan tetap divalidasi backend (izin role, siklus, status tugas).
  */
 export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, bulk }) {
-  const [start, setStart] = useState(() => addDays(startOfDay(), -6));
+  // Rentang yang dirender: mulai 5 minggu sebelum hari ini, bertambah saat digeser ke ujung.
+  const [range, setRange] = useState(() => ({
+    start: addDays(startOfDay(), -6 - EXTEND),
+    len: VISIBLE_DAYS + 2 * EXTEND,
+  }));
+  const start = range.start;
+  const SPAN = range.len;
   const days = Array.from({ length: SPAN }, (_, i) => addDays(start, i));
   const today = startOfDay();
   const bind = useMenuBinder();
@@ -62,7 +75,54 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const DAY_W = Math.max(MIN_DAY_W, boxW / SPAN || 64);
+  // Lebar kolom: 14 hari pas memenuhi panel, minimal 56 px.
+  const DAY_W = Math.max(MIN_DAY_W, boxW / VISIBLE_DAYS || 64);
+
+  // ---- Posisi geser horizontal ----
+  // anchorMs = tanggal (ms, boleh pecahan hari) di tepi kiri layar. Dipakai untuk menjaga posisi
+  // saat rentang ditambah ke kiri atau lebar kolom berubah karena ukuran jendela.
+  const anchorMs = useRef(addDays(startOfDay(), -6).getTime());
+  const [scrollX, setScrollX] = useState(0);
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el || !boxW) return;
+    el.scrollLeft = ((anchorMs.current - start.getTime()) / DAY_MS) * DAY_W;
+    setScrollX(el.scrollLeft);
+  }, [start, DAY_W, boxW]);
+
+  const onScroll = useCallback(
+    (e) => {
+      const el = e.currentTarget;
+      anchorMs.current = start.getTime() + (el.scrollLeft / DAY_W) * DAY_MS;
+      setScrollX(el.scrollLeft);
+      const edge = EDGE_DAYS * DAY_W;
+      if (el.scrollLeft < edge && SPAN < MAX_DAYS)
+        setRange((r) => ({ start: addDays(r.start, -EXTEND), len: r.len + EXTEND }));
+      else if (el.scrollLeft + el.clientWidth > el.scrollWidth - edge && SPAN < MAX_DAYS)
+        setRange((r) => ({ ...r, len: r.len + EXTEND }));
+    },
+    [start, DAY_W, SPAN],
+  );
+
+  // Roda mouse biasa (vertikal) menggeser tanggal bila timeline tidak perlu scroll vertikal.
+  // Touchpad dan Shift + roda sudah menghasilkan scroll horizontal bawaan browser.
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const onWheel = (e) => {
+      if (e.shiftKey || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      if (el.scrollHeight > el.clientHeight + 1) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Label rentang mengikuti hari yang sedang terlihat di layar.
+  const firstVisible = Math.min(Math.max(0, Math.round(scrollX / DAY_W)), SPAN - 1);
+  const visibleCount = Math.max(1, Math.floor((boxW || VISIBLE_DAYS * DAY_W) / DAY_W));
+  const lastVisible = Math.min(SPAN - 1, firstVisible + visibleCount - 1);
 
   // ---- Status seret ----
   // drag = { mode: 'move'|'start'|'end'|'link', task, x0, y0, dx, px, py, moved, targetId }
@@ -87,7 +147,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     return shiftSpan(sp, drag.mode, deltaDays);
   };
 
-  // Hanya tugas yang beririsan dengan rentang 14 hari yang digambar; bar dipotong di tepi rentang.
+  // Hanya tugas yang beririsan dengan rentang yang dirender; bar dipotong di tepi rentang.
   const visible = rows.filter((t) => {
     const { s, e } = spanOf(t);
     const sp = effSpan(t);
@@ -107,6 +167,34 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
       clipR: diffDays(sp.e, start) > SPAN - 1,
     });
   });
+
+  // Baris tugas paling atas yang beririsan dengan jendela [fromIdx, fromIdx + 14 hari).
+  // Dipakai agar tampilan langsung menunjukkan tugas minggu ini, bukan baris tugas lama yang kosong.
+  const firstRowTop = (fromIdx) => {
+    let best = null;
+    visible.forEach((t) => {
+      const sp = spanOf(t);
+      if (diffDays(sp.e, start) >= fromIdx && diffDays(sp.s, start) < fromIdx + VISIBLE_DAYS) {
+        const y = layout.get(t.id).y;
+        if (best === null || y < best) best = y;
+      }
+    });
+    return best === null ? 0 : Math.max(0, best - HEAD_ROW - 5);
+  };
+  const todayIdx = diffDays(addDays(startOfDay(), -6), start);
+
+  const goToday = () => {
+    boxRef.current?.scrollTo({ left: todayIdx * DAY_W, top: firstRowTop(todayIdx), behavior: 'smooth' });
+  };
+
+  // Saat pertama dibuka (data dan ukuran panel sudah siap), scroll vertikal ke tugas minggu ini.
+  const didInitV = useRef(false);
+  const topForToday = firstRowTop(todayIdx);
+  useEffect(() => {
+    if (didInitV.current || !boxW || !tasks.length || !boxRef.current) return;
+    didInitV.current = true;
+    boxRef.current.scrollTop = topForToday;
+  }, [boxW, tasks.length, topForToday]);
 
   // Garis prasyarat: dari ujung kanan bar prasyarat ke awal bar tugas yang menunggu.
   // Hubungan yang masih menghambat digambar tegas; yang sudah selesai digambar samar.
@@ -138,6 +226,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     setDrag({
       mode,
       task,
+      scroll0: boxRef.current.scrollLeft,
       x0: e.clientX,
       y0: e.clientY,
       dx: 0,
@@ -152,8 +241,13 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     if (!drag) return undefined;
     const onMove = (e) => {
       const rect = bodyRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const dx = e.clientX - drag.x0;
+      const box = boxRef.current;
+      if (!rect || !box) return;
+      // Saat menyeret dekat tepi kiri/kanan, timeline ikut bergeser.
+      const b = box.getBoundingClientRect();
+      if (e.clientX < b.left + 40) box.scrollLeft -= 16;
+      else if (e.clientX > b.right - 40) box.scrollLeft += 16;
+      const dx = e.clientX - drag.x0 + (box.scrollLeft - drag.scroll0);
       const moved = drag.moved || Math.hypot(dx, e.clientY - drag.y0) > DRAG_THRESHOLD;
       let targetId = null;
       if (drag.mode === 'link') {
@@ -205,6 +299,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
   const height = Math.max(contentH, Math.floor(box.h));
 
   const linkSource = drag?.mode === 'link' && drag.moved ? layout.get(drag.task.id) : null;
+  const active = (t) => drag?.task.id === t.id;
   const dragging = drag?.moved ? drag : null;
   const tip =
     dragging && dragging.mode !== 'link'
@@ -222,14 +317,10 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <div className="row-between tl-toolbar" style={{ marginBottom: 12 }}>
         <div className="row">
-          <button className="btn btn-sm" onClick={() => setStart((s) => addDays(s, -7))} aria-label="Minggu sebelumnya">
-            <ChevronLeft size={14} />
-          </button>
-          <button className="btn btn-sm" onClick={() => setStart((s) => addDays(s, 7))} aria-label="Minggu berikutnya">
-            <ChevronRight size={14} />
-          </button>
-          <strong style={{ fontSize: 16, marginLeft: 6 }}>{rangeLabel(days[0], days[SPAN - 1])}</strong>
-          <button className="btn btn-sm" onClick={() => setStart(addDays(startOfDay(), -6))}>
+          <strong style={{ fontSize: 16 }} aria-live="polite">
+            {rangeLabel(days[firstVisible], days[lastVisible])}
+          </strong>
+          <button className="btn btn-sm" onClick={goToday}>
             Today
           </button>
         </div>
@@ -243,7 +334,13 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
         </div>
       </div>
 
-      <div className={`timeline ${dragging ? 'is-dragging' : ''}`} ref={boxRef}>
+      <div
+        className={`timeline ${dragging ? 'is-dragging' : ''}`}
+        ref={boxRef}
+        onScroll={onScroll}
+        tabIndex={0}
+        aria-label="Timeline, geser ke kiri atau kanan untuk melihat tanggal lain"
+      >
         <div className="tl-head" style={{ gridTemplateColumns: `repeat(${SPAN}, ${DAY_W}px)`, width }}>
           {days.map((d) => (
             <div key={d.toISOString()} className={`tl-day ${sameDay(d, today) ? 'today' : ''}`}>
@@ -451,6 +548,30 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
             );
           })}
 
+          {/* Penanda tugas di luar layar: klik untuk menggeser timeline ke bar tersebut */}
+          {boxW > 0 &&
+            visible.map((t) => {
+              const pos = layout.get(t.id);
+              if (!pos.w || (active(t) && dragging)) return null;
+              const viewL = scrollX;
+              const viewR = scrollX + boxW;
+              const side = pos.x + pos.w < viewL + 8 ? 'left' : pos.x > viewR - 8 ? 'right' : null;
+              if (!side) return null;
+              return (
+                <button
+                  key={`off-${t.id}`}
+                  className={`tl-offscreen ${side}`}
+                  style={{ top: pos.y + 3, left: side === 'left' ? viewL + 6 : viewR - 6 }}
+                  onClick={() => boxRef.current?.scrollTo({ left: Math.max(0, pos.x - 2 * DAY_W), behavior: 'smooth' })}
+                  title={`${t.title} · ${fmtShort(spanOf(t).s)} – ${fmtShort(spanOf(t).e)}`}
+                >
+                  {side === 'left' && <ChevronLeft size={12} />}
+                  <span className="truncate">{t.title}</span>
+                  {side === 'right' && <ChevronRight size={12} />}
+                </button>
+              );
+            })}
+
           {dragging && (
             <div className="tl-tip" style={{ left: Math.min(drag.px + 14, width - 260), top: drag.py + 16 }}>
               {tip}
@@ -460,7 +581,8 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
       </div>
       <p className="xs muted row" style={{ marginTop: 10, gap: 6, flexWrap: 'wrap' }}>
         <Lock size={12} className="st-BLOCKED" />
-        Dashed line = dependency.
+        Dashed line = dependency. Swipe left/right on the touchpad (or use the scrollbar / Shift + wheel) to move
+        between dates.
         {(canEdit || canLink) && (
           <span className="row" style={{ gap: 4 }}>
             <MousePointerClick size={12} />
