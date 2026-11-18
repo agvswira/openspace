@@ -2400,3 +2400,229 @@ p {
   color: var(--text);
   border-color: var(--border-strong);
 }
+
+/* =====================================================================
+   Transisi & animasi mikro. Singkat (120–220 ms) dan halus: memberi umpan balik
+   saat diklik/diarahkan tanpa memperlambat pekerjaan. Dimatikan otomatis bila
+   pengguna memilih "kurangi animasi" di sistem operasi.
+   ===================================================================== */
+:root {
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 0.12s;
+  --dur: 0.18s;
+}
+
+/* --- Elemen yang bisa diklik: warna berubah halus, sedikit "tertekan" saat diklik --- */
+.btn,
+.icon-btn,
+.tab,
+.nav-item,
+.menu-item,
+.chip,
+.link,
+.account,
+.search-trigger,
+.quick-add-btn,
+.segmented button,
+.mobile-tab,
+.bnav-item,
+.tl-offscreen,
+.toast-action,
+.task-check {
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.chip:active,
+.segmented button:active,
+.quick-add-btn:active,
+.tl-offscreen:active,
+.toast-action:active {
+  transform: scale(0.96);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+.nav-item:active,
+.menu-item:active:not(:disabled),
+.bnav-item:active,
+.mobile-tab:active {
+  transform: scale(0.98);
+}
+.fab {
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+.fab:active {
+  transform: scale(0.92);
+}
+
+/* Ikon chevron sidebar berputar halus saat proyek dibuka/ditutup */
+.nav-sub {
+  animation: sub-in var(--dur) var(--ease);
+  transform-origin: top;
+}
+@keyframes sub-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --- Kartu: terangkat sedikit saat diarahkan, tertekan saat diklik --- */
+.task-card,
+.project-card,
+.tl-bar,
+.cal-ev,
+.role-item {
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease),
+    filter var(--dur) var(--ease),
+    opacity var(--dur) var(--ease);
+}
+.task-card:hover,
+.project-card:hover {
+  transform: translateY(-1px);
+}
+.project-card:hover {
+  box-shadow: var(--shadow);
+}
+.task-card:active,
+.project-card:active {
+  transform: translateY(0) scale(0.99);
+}
+.tl-bar.active,
+.timeline.is-dragging .tl-bar {
+  transition: none; /* posisi bar mengikuti pointer tanpa jeda */
+}
+.table tr.clickable td,
+.list-row.clickable {
+  transition: background-color var(--dur-fast) var(--ease);
+}
+.col-body {
+  transition:
+    background-color var(--dur) var(--ease),
+    outline-color var(--dur) var(--ease);
+}
+
+/* Checkbox selesai: "pop" kecil saat dicentang */
+.task-check.checked svg {
+  animation: check-pop 0.22s var(--ease);
+}
+@keyframes check-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* Progres bergerak halus saat status tugas berubah */
+.progress > span {
+  transition: width 0.5s var(--ease-in-out);
+}
+svg circle {
+  transition: stroke-dashoffset 0.5s var(--ease-in-out);
+}
+
+/* --- Pindah halaman & pindah tampilan (Board/List/Calendar/Timeline) --- */
+.page,
+.page-wide,
+.view-swap {
+  animation: page-in 0.22s var(--ease);
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.view-swap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Dialog, panel, menu, notifikasi --- */
+.overlay,
+.drawer-overlay {
+  animation: fade-in var(--dur) var(--ease);
+}
+.drawer {
+  animation: drawer-in 0.22s var(--ease);
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+.popover:not(.ctx-menu) {
+  animation: pop-in var(--dur-fast) var(--ease);
+  transform-origin: top;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+.toast {
+  animation: toast-in 0.22s var(--ease);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.hidden-bar,
+.tl-tip {
+  animation: fade-in var(--dur) var(--ease);
+}
+@media (min-width: 769px) {
+  .modal {
+    animation: modal-in 0.2s var(--ease);
+  }
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+}
+
+/* --- Ganti tema: warna berpindah lembut (kelas dipasang sesaat oleh ThemeContext) --- */
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after {
+  transition:
+    background-color 0.3s var(--ease-in-out),
+    color 0.3s var(--ease-in-out),
+    border-color 0.3s var(--ease-in-out),
+    fill 0.3s var(--ease-in-out),
+    stroke 0.3s var(--ease-in-out) !important;
+}
+
+/* --- Aksesibilitas: hormati pengaturan "kurangi animasi" --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

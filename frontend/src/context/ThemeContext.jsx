@@ -35,6 +35,11 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   const setTheme = useCallback((next) => {
+    // Transisi warna hanya saat pengguna mengganti tema, bukan saat halaman dimuat.
+    const root = document.documentElement;
+    root.classList.add('theme-anim');
+    clearTimeout(window.__themeAnimTimer);
+    window.__themeAnimTimer = setTimeout(() => root.classList.remove('theme-anim'), 350);
     setThemeState(next);
     try {
       if (next === 'system') localStorage.removeItem(STORAGE_KEY);

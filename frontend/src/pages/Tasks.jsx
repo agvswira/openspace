@@ -261,10 +261,13 @@ export default function Tasks() {
               )}
             </div>
           )}
-          {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
-          {view === 'list' && <ListView {...viewProps} />}
-          {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
-          {view === 'timeline' && <TimelineView {...viewProps} milestones={milestones} />}
+          {/* key = view: tampilan baru masuk dengan transisi halus saat tab diganti */}
+          <div key={view} className="view-swap">
+            {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
+            {view === 'list' && <ListView {...viewProps} />}
+            {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
+            {view === 'timeline' && <TimelineView {...viewProps} milestones={milestones} />}
+          </div>
         </div>
       )}
       {creating && <TaskFormModal projectId={projectId} defaultStatus={creating} onClose={() => setCreating(null)} />}
