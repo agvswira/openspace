@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Diamond, Lock, Unlink, MousePointerClick } from 'lucide-react';
 import { AvatarStack } from '../ui';
 import { useContextMenu, useMenuBinder } from '../ui/ContextMenu';
@@ -10,9 +10,6 @@ const MIN_DAY_W = 56;
 const ROW_H = 36;
 const HEAD_ROW = 34; // baris milestone di atas daftar tugas
 const VISIBLE_DAYS = 14; // jumlah hari yang muat di layar; sisanya digeser (scroll)
-const EXTEND = 28; // hari yang ditambahkan saat digeser mendekati ujung rentang
-const EDGE_DAYS = 7; // jarak (hari) dari ujung yang memicu penambahan rentang
-const MAX_DAYS = 730;
 const DRAG_THRESHOLD = 4; // px; di bawah ini dianggap klik biasa
 const DAY_MS = 864e5;
 
@@ -34,8 +31,8 @@ function rangeLabel(a, b) {
  * Timeline: setiap tugas digambar sebagai bar dari tanggal mulai sampai deadline, hubungan
  * prasyarat sebagai garis putus-putus (Gambar 2.14). Navigasi tanggal cukup digeser:
  * touchpad (dua jari kiri/kanan), scrollbar di bawah, Shift + roda mouse, atau roda mouse
- * biasa bila tidak ada baris yang perlu di-scroll vertikal. Rentang tanggal bertambah
- * otomatis saat digeser ke ujung. Interaksi langsung pada bar:
+ * biasa bila tidak ada baris yang perlu di-scroll vertikal. Rentang tanggal mengikuti tugas
+ * yang ada (tugas paling awal sampai paling akhir). Interaksi langsung pada bar:
  *  - seret bar            → geser jadwal (mulai & deadline bergeser bersama)
  *  - seret tepi kiri/kanan → ubah tanggal mulai / deadline
  *  - seret titik di ujung kanan bar ke bar lain → bar tujuan menunggu bar asal (prasyarat)
@@ -43,14 +40,6 @@ function rangeLabel(a, b) {
  * Semua perubahan tetap divalidasi backend (izin role, siklus, status tugas).
  */
 export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, bulk }) {
-  // Rentang yang dirender: mulai 5 minggu sebelum hari ini, bertambah saat digeser ke ujung.
-  const [range, setRange] = useState(() => ({
-    start: addDays(startOfDay(), -6 - EXTEND),
-    len: VISIBLE_DAYS + 2 * EXTEND,
-  }));
-  const start = range.start;
-  const SPAN = range.len;
-  const days = Array.from({ length: SPAN }, (_, i) => addDays(start, i));
   const today = startOfDay();
   const bind = useMenuBinder();
   const openMenu = useContextMenu();
@@ -78,52 +67,6 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
   // Lebar kolom: 14 hari pas memenuhi panel, minimal 56 px.
   const DAY_W = Math.max(MIN_DAY_W, boxW / VISIBLE_DAYS || 64);
 
-  // ---- Posisi geser horizontal ----
-  // anchorMs = tanggal (ms, boleh pecahan hari) di tepi kiri layar. Dipakai untuk menjaga posisi
-  // saat rentang ditambah ke kiri atau lebar kolom berubah karena ukuran jendela.
-  const anchorMs = useRef(addDays(startOfDay(), -6).getTime());
-  const [scrollX, setScrollX] = useState(0);
-  useLayoutEffect(() => {
-    const el = boxRef.current;
-    if (!el || !boxW) return;
-    el.scrollLeft = ((anchorMs.current - start.getTime()) / DAY_MS) * DAY_W;
-    setScrollX(el.scrollLeft);
-  }, [start, DAY_W, boxW]);
-
-  const onScroll = useCallback(
-    (e) => {
-      const el = e.currentTarget;
-      anchorMs.current = start.getTime() + (el.scrollLeft / DAY_W) * DAY_MS;
-      setScrollX(el.scrollLeft);
-      const edge = EDGE_DAYS * DAY_W;
-      if (el.scrollLeft < edge && SPAN < MAX_DAYS)
-        setRange((r) => ({ start: addDays(r.start, -EXTEND), len: r.len + EXTEND }));
-      else if (el.scrollLeft + el.clientWidth > el.scrollWidth - edge && SPAN < MAX_DAYS)
-        setRange((r) => ({ ...r, len: r.len + EXTEND }));
-    },
-    [start, DAY_W, SPAN],
-  );
-
-  // Roda mouse biasa (vertikal) menggeser tanggal bila timeline tidak perlu scroll vertikal.
-  // Touchpad dan Shift + roda sudah menghasilkan scroll horizontal bawaan browser.
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return undefined;
-    const onWheel = (e) => {
-      if (e.shiftKey || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
-      if (el.scrollHeight > el.clientHeight + 1) return;
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
-
-  // Label rentang mengikuti hari yang sedang terlihat di layar.
-  const firstVisible = Math.min(Math.max(0, Math.round(scrollX / DAY_W)), SPAN - 1);
-  const visibleCount = Math.max(1, Math.floor((boxW || VISIBLE_DAYS * DAY_W) / DAY_W));
-  const lastVisible = Math.min(SPAN - 1, firstVisible + visibleCount - 1);
-
   // ---- Status seret ----
   // drag = { mode: 'move'|'start'|'end'|'link', task, x0, y0, dx, px, py, moved, targetId }
   const [drag, setDrag] = useState(null);
@@ -147,13 +90,76 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     return shiftSpan(sp, drag.mode, deltaDays);
   };
 
-  // Hanya tugas yang beririsan dengan rentang yang dirender; bar dipotong di tepi rentang.
-  const visible = rows.filter((t) => {
-    const { s, e } = spanOf(t);
+  // ---- Rentang tanggal = dari tugas paling awal sampai tugas paling akhir ----
+  // Timeline hanya bisa digeser sejauh tanggal yang memang berisi tugas (dan milestone), ditambah
+  // 1 hari ruang di tiap sisi. Tugas baru atau bar yang diseret keluar rentang otomatis
+  // memperluas rentang. Bila rentang lebih pendek dari 14 hari, rentang dilebarkan ke kedua sisi
+  // agar grid tetap memenuhi panel.
+  let minS = null;
+  let maxE = null;
+  const include = (a, b) => {
+    if (!minS || a < minS) minS = a;
+    if (!maxE || b > maxE) maxE = b;
+  };
+  rows.forEach((t) => {
     const sp = effSpan(t);
-    const inRange = (a, b) => diffDays(b, start) >= 0 && diffDays(a, start) < SPAN;
-    return inRange(s, e) || inRange(sp.s, sp.e);
+    include(sp.s, sp.e);
   });
+  milestones.filter((m) => m.dueDate).forEach((m) => include(startOfDay(m.dueDate), startOfDay(m.dueDate)));
+  if (!minS) {
+    minS = addDays(today, -6);
+    maxE = addDays(today, VISIBLE_DAYS - 7);
+  }
+  let start = addDays(minS, -1);
+  let SPAN = diffDays(maxE, minS) + 3;
+  if (SPAN < VISIBLE_DAYS) {
+    start = addDays(start, -Math.floor((VISIBLE_DAYS - SPAN) / 2));
+    SPAN = VISIBLE_DAYS;
+  }
+  const startMs = start.getTime();
+  const days = Array.from({ length: SPAN }, (_, i) => addDays(start, i));
+
+  // ---- Posisi geser horizontal ----
+  // anchorMs = tanggal (ms, boleh pecahan hari) di tepi kiri layar. Dipakai untuk menjaga posisi
+  // saat rentang berubah (tugas baru, bar diseret) atau lebar kolom berubah karena ukuran jendela.
+  // Browser otomatis membatasi scrollLeft ke rentang yang ada.
+  const anchorMs = useRef(addDays(startOfDay(), -6).getTime());
+  const [scrollX, setScrollX] = useState(0);
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!el || !boxW) return;
+    el.scrollLeft = ((anchorMs.current - startMs) / DAY_MS) * DAY_W;
+    setScrollX(el.scrollLeft);
+  }, [startMs, SPAN, DAY_W, boxW]);
+
+  const onScroll = (e) => {
+    const el = e.currentTarget;
+    anchorMs.current = startMs + (el.scrollLeft / DAY_W) * DAY_MS;
+    setScrollX(el.scrollLeft);
+  };
+
+  // Roda mouse biasa (vertikal) menggeser tanggal bila timeline tidak perlu scroll vertikal.
+  // Touchpad dan Shift + roda sudah menghasilkan scroll horizontal bawaan browser.
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const onWheel = (e) => {
+      if (e.shiftKey || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      if (el.scrollHeight > el.clientHeight + 1) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Label rentang mengikuti hari yang sedang terlihat di layar.
+  const firstVisible = Math.min(Math.max(0, Math.round(scrollX / DAY_W)), SPAN - 1);
+  const visibleCount = Math.max(1, Math.floor((boxW || VISIBLE_DAYS * DAY_W) / DAY_W));
+  const lastVisible = Math.min(SPAN - 1, firstVisible + visibleCount - 1);
+
+  // Semua tugas bertanggal berada di dalam rentang.
+  const visible = rows;
   const layout = new Map();
   visible.forEach((t, i) => {
     const sp = effSpan(t);
