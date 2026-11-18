@@ -131,9 +131,6 @@ export function SignIn() {
             Create an account
           </Link>
         </p>
-        <p className="xs faint" style={{ textAlign: 'center' }}>
-          Demo: wira@openspace.example / password123
-        </p>
       </form>
     </AuthShell>
   );
