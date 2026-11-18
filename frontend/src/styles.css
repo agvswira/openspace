@@ -1908,3 +1908,445 @@ p {
 .tl-bar.linkable {
   padding-right: 18px;
 }
+
+/* =====================================================================
+   Tampilan mobile (Figma: Screens · Mobile). Desktop tidak berubah.
+   ===================================================================== */
+.mobile-only {
+  display: none !important;
+}
+.sidebar-backdrop,
+.ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--backdrop);
+  animation: fade-in 0.15s ease-out;
+}
+.ctx-backdrop {
+  z-index: 115;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Tablet: sidebar lebih ramping, grid lebih sedikit kolom */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 212px;
+  }
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .calendar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .calendar > aside {
+    margin-top: 0 !important;
+  }
+  .settings-section {
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: inline-flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* --- Kerangka: sidebar menjadi laci, konten penuh, navigasi bawah --- */
+  .app {
+    height: 100dvh;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 80;
+    width: min(300px, 86vw);
+    background: var(--bg-panel);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    padding-top: 14px;
+  }
+  .sidebar.open {
+    transform: none;
+  }
+  .sidebar-close {
+    position: absolute;
+    top: 12px;
+    right: 10px;
+    z-index: 1;
+  }
+  .sidebar .ws-switch {
+    padding-right: 40px;
+  }
+  .main {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+  .topbar {
+    height: 52px;
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .crumbs {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .crumbs > span:not(.current),
+  .crumbs > svg {
+    display: none;
+  }
+  .crumbs .current {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .topbar-actions {
+    gap: 2px;
+  }
+
+  .mobile-tabs {
+    display: flex !important;
+    gap: 4px;
+    padding: 6px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mobile-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .mobile-tab.active {
+    color: var(--text);
+    background: var(--bg-muted);
+    border-color: var(--border);
+    font-weight: 500;
+  }
+
+  .bottom-nav {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    height: calc(60px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+  }
+  .bottom-nav > span {
+    display: flex;
+  }
+  .bnav-item {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .bnav-item.active {
+    color: var(--primary);
+  }
+  .bnav-count {
+    position: absolute;
+    top: 4px;
+    left: calc(50% + 6px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--prio-high);
+    color: #fff;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+  }
+  .fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 55;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    cursor: pointer;
+  }
+
+  /* --- Halaman --- */
+  .page,
+  .page-wide {
+    padding: 16px 16px 24px;
+  }
+  .page-head {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .page-head > .row {
+    flex-wrap: wrap;
+  }
+  .page-title {
+    font-size: 22px;
+  }
+  .row-between {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+  .tab {
+    white-space: nowrap;
+  }
+  .input-icon {
+    width: auto !important;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .project-grid,
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+  .settings-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 0;
+  }
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .members-split,
+  .meetings-split,
+  .roles-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .perm-row {
+    gap: 12px;
+  }
+
+  /* Board: kolom digeser horizontal satu per satu */
+  .board {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin: 0 -16px;
+    padding: 0 16px 8px;
+  }
+  .board > section {
+    flex: 0 0 84vw;
+    scroll-snap-align: center;
+  }
+  .card-more {
+    opacity: 1;
+    width: 32px;
+    height: 32px;
+  }
+
+  /* List & tabel: geser horizontal */
+  .table {
+    min-width: 640px;
+  }
+  .bulk-bar {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Calendar & Timeline */
+  .cal-grid {
+    font-size: 11px;
+  }
+  .cal-ev .truncate {
+    display: none;
+  }
+  .cal-ev {
+    justify-content: center;
+    padding: 2px;
+  }
+  .tl-legend {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .timeline {
+    min-height: 360px;
+  }
+
+  /* Task row (Home/My tasks): meta disusun di bawah judul */
+  .task-row {
+    flex-wrap: wrap;
+  }
+  .task-row-meta {
+    width: 100%;
+    padding-left: 28px;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  .task-row-col {
+    width: auto !important;
+  }
+
+  /* Dialog → panel bawah, detail tugas → layar penuh */
+  .overlay {
+    place-items: end stretch;
+    padding: 0;
+  }
+  .modal,
+  .modal-lg {
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: 16px 16px 0 0;
+    animation: sheet-up 0.2s ease-out;
+  }
+  .modal-foot {
+    flex-wrap: wrap;
+  }
+  /* Urutan lapisan di ponsel: konten < navigasi bawah < laci/detail < dialog < menu < toast */
+  .drawer {
+    inset: 0;
+    width: auto;
+    border-radius: 0;
+    z-index: 91;
+  }
+  .drawer-overlay {
+    z-index: 90;
+  }
+  .overlay {
+    z-index: 95;
+  }
+  .popover:not(.ctx-menu) {
+    max-width: calc(100vw - 16px);
+    z-index: 100;
+  }
+  .toasts {
+    z-index: 130;
+  }
+  .detail-head .row-between {
+    flex-wrap: nowrap;
+  }
+  .detail-head .row-between > .mono {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Menu klik kanan sebagai bottom sheet (dibuka dengan tekan lama) */
+  .ctx-menu.sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    max-width: none;
+    width: auto;
+    max-height: 75dvh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 8px 8px calc(12px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.2s ease-out;
+  }
+  .ctx-menu.sheet::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 2px auto 8px;
+    border-radius: 2px;
+    background: var(--border-strong);
+  }
+  .ctx-menu.sheet .menu-item {
+    height: 46px;
+    font-size: var(--fs-body);
+  }
+  .ctx-menu.sheet .ctx-menu.sheet {
+    z-index: 121;
+  }
+
+  /* Toast di atas navigasi bawah */
+  .toasts {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+  }
+  .toast {
+    max-width: none;
+  }
+
+  /* Auth: tanpa panel hero */
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .auth-hero {
+    display: none;
+  }
+}
+
+/* Layar sentuh: target sentuh minimal ~40px */
+@media (hover: none) and (pointer: coarse) {
+  .icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .menu-item {
+    min-height: 40px;
+  }
+}

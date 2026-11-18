@@ -119,7 +119,7 @@ export default function Tasks() {
             </button>
           )}
           {canCreate && (
-            <button className="btn btn-primary" onClick={() => setCreating('TODO')}>
+            <button className="btn btn-primary desktop-only" onClick={() => setCreating('TODO')}>
               <Plus size={15} />
               New task
             </button>
@@ -271,6 +271,11 @@ export default function Tasks() {
       {openTaskId && <TaskDetailPanel taskId={openTaskId} projectId={projectId} onClose={() => setParam('task', '')} />}
       {rejected && <ConfirmDialog title="Perubahan ditolak" message={rejected} onClose={() => setRejected(null)} />}
       {actions.dialogs}
+      {canCreate && (
+        <button className="fab mobile-only" onClick={() => setCreating('TODO')} aria-label="New task">
+          <Plus size={22} />
+        </button>
+      )}
     </div>
   );
 }

@@ -449,7 +449,7 @@ export default function Meetings() {
           </EmptyState>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
+        <div className="meetings-split" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
           <div>
             {groups.map((g) => (
               <div key={g.label} style={{ marginBottom: 12 }}>

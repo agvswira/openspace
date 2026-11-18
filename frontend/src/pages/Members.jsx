@@ -164,6 +164,7 @@ export default function Members() {
       </div>
 
       <div
+        className="members-split"
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) minmax(240px, 300px)',
