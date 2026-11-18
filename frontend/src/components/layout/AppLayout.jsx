@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useMatch, useNavigate, Link } from 'react-router-dom';
 import {
   Home,
@@ -18,6 +18,10 @@ import {
   ChevronLeft,
   ChevronsUpDown,
   LogOut,
+  Menu as MenuIcon,
+  X,
+  Inbox,
+  CircleUser,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -27,6 +31,9 @@ import SearchDialog from './SearchDialog';
 import NotificationsMenu from './NotificationsMenu';
 import NewProjectModal from './NewProjectModal';
 import InviteModal from '../InviteModal';
+import { ThemeSwitcher, ThemeToggleButton } from '../ThemeSwitcher';
+import { useMenuBinder } from '../ui/ContextMenu';
+import { useProjectMenu } from './projectMenu';
 
 const PROJECT_NAV = [
   { to: 'overview', label: 'Overview', Icon: LayoutGrid },
@@ -37,7 +44,7 @@ const PROJECT_NAV = [
   { to: 'settings', label: 'Settings', Icon: Settings },
 ];
 
-function Sidebar({ onSearch, onNewProject }) {
+function Sidebar({ onSearch, onNewProject, open, onClose }) {
   const { user, workspace, logout } = useAuth();
   const { data: projects = [] } = useProjects();
   const { data: summary } = useSummary();
@@ -46,9 +53,14 @@ function Sidebar({ onSearch, onNewProject }) {
   const [expanded, setExpanded] = useState({});
   const isOpen = (id) => expanded[id] ?? id === activeId;
   const navigate = useNavigate();
+  const bind = useMenuBinder();
+  const projectMenu = useProjectMenu();
 
   return (
-    <aside className="sidebar" aria-label="Navigasi utama">
+    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Navigasi utama">
+      <button className="icon-btn mobile-only sidebar-close" onClick={onClose} aria-label="Tutup menu">
+        <X size={16} />
+      </button>
       <div className="ws-switch">
         <span className="ws-logo">
           <img src="/logo.png" height="20" alt="" style={{ width: 'auto' }} />
@@ -97,6 +109,7 @@ function Sidebar({ onSearch, onNewProject }) {
                 if (p.id !== activeId) navigate(`/projects/${p.id}/overview`);
               }}
               aria-expanded={isOpen(p.id)}
+              {...bind(() => projectMenu(p))}
             >
               <ProjectMark project={p} />
               <span className="grow truncate" style={{ fontWeight: 500 }}>
@@ -133,7 +146,7 @@ function Sidebar({ onSearch, onNewProject }) {
         </NavLink>
         <Menu
           align="left"
-          width={220}
+          width="100%"
           trigger={({ toggle }) => (
             <button className="account" onClick={toggle}>
               <Avatar user={user} size={30} />
@@ -153,6 +166,10 @@ function Sidebar({ onSearch, onNewProject }) {
             <Settings size={14} />
             Profile & preferences
           </Link>
+          <div className="menu-label">Theme</div>
+          <div style={{ padding: '0 6px 6px' }}>
+            <ThemeSwitcher />
+          </div>
           <button
             className="menu-item danger"
             onClick={() => {
@@ -169,7 +186,7 @@ function Sidebar({ onSearch, onNewProject }) {
   );
 }
 
-function Topbar({ onInvite }) {
+function Topbar({ onInvite, onMenu }) {
   const { user, workspace } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -209,6 +226,9 @@ function Topbar({ onInvite }) {
 
   return (
     <header className="topbar">
+      <button className="icon-btn mobile-only" onClick={onMenu} aria-label="Buka menu navigasi">
+        <MenuIcon size={18} />
+      </button>
       <button className="icon-btn" onClick={() => navigate(-1)} aria-label="Kembali">
         <ChevronLeft size={16} />
       </button>
@@ -231,6 +251,7 @@ function Topbar({ onInvite }) {
             <Share2 size={16} />
           </button>
         )}
+        <ThemeToggleButton />
         <NotificationsMenu
           trigger={({ toggle, unread }) => (
             <button
@@ -242,9 +263,72 @@ function Topbar({ onInvite }) {
             </button>
           )}
         />
-        <Avatar user={user} size={28} />
+        <span className="desktop-only">
+          <Avatar user={user} size={28} />
+        </span>
       </div>
     </header>
+  );
+}
+
+// Tab proyek yang dapat digeser horizontal (hanya tampil di layar kecil, Figma "M / Overview").
+function ProjectTabs({ projectId }) {
+  const ref = useRef(null);
+  const { pathname } = useLocation();
+  // Tab aktif digeser ke tengah agar terlihat walau berada di ujung daftar.
+  useEffect(() => {
+    ref.current?.querySelector('.mobile-tab.active')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [pathname]);
+  return (
+    <nav ref={ref} className="mobile-tabs mobile-only" aria-label="Navigasi proyek">
+      {PROJECT_NAV.map(({ to, label, Icon }) => (
+        <NavLink
+          key={to}
+          to={`/projects/${projectId}/${to}`}
+          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+        >
+          <Icon size={14} />
+          {label}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
+// Navigasi bawah untuk ponsel: Home, My tasks, Search, Inbox, Account (Figma Screens · Mobile).
+function BottomNav({ onSearch, onMenu }) {
+  const { user } = useAuth();
+  const { data: summary } = useSummary();
+  const item = ({ isActive }) => `bnav-item ${isActive ? 'active' : ''}`;
+  return (
+    <nav className="bottom-nav mobile-only" aria-label="Navigasi bawah">
+      <NavLink to="/" end className={item}>
+        <Home size={20} />
+        Home
+      </NavLink>
+      <NavLink to="/my-tasks" className={item}>
+        <SquareCheckBig size={20} />
+        My tasks
+        {summary?.openTasks ? <span className="bnav-count">{summary.openTasks}</span> : null}
+      </NavLink>
+      <button className="bnav-item" onClick={onSearch}>
+        <Search size={20} />
+        Search
+      </button>
+      <NotificationsMenu
+        trigger={({ toggle, unread }) => (
+          <button className="bnav-item" onClick={toggle}>
+            <Inbox size={20} />
+            Inbox
+            {unread ? <span className="bnav-count">{unread}</span> : null}
+          </button>
+        )}
+      />
+      <button className="bnav-item" onClick={onMenu}>
+        {user ? <Avatar user={user} size={20} /> : <CircleUser size={20} />}
+        Account
+      </button>
+    </nav>
   );
 }
 
@@ -253,6 +337,14 @@ export default function AppLayout() {
   const [newProject, setNewProject] = useState(false);
   const [invite, setInvite] = useState(false);
   const match = useMatch('/projects/:projectId/*');
+  const location = useLocation();
+  // Layar kecil: sidebar menjadi laci (drawer) yang ditutup otomatis saat pindah halaman.
+  const [navOpen, setNavOpen] = useState(false);
+  const [navPath, setNavPath] = useState(location.pathname);
+  if (navPath !== location.pathname) {
+    setNavPath(location.pathname);
+    setNavOpen(false);
+  }
 
   useEffect(() => {
     const onKey = (e) => {
@@ -267,13 +359,21 @@ export default function AppLayout() {
 
   return (
     <div className="app">
-      <Sidebar onSearch={() => setSearchOpen(true)} onNewProject={() => setNewProject(true)} />
+      <Sidebar
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
+        onSearch={() => setSearchOpen(true)}
+        onNewProject={() => setNewProject(true)}
+      />
+      {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} />}
       <main className="main">
-        <Topbar onInvite={() => setInvite(true)} />
+        <Topbar onInvite={() => setInvite(true)} onMenu={() => setNavOpen(true)} />
+        {match && <ProjectTabs projectId={match.params.projectId} />}
         <div className="content">
           <Outlet context={{ openNewProject: () => setNewProject(true), openInvite: () => setInvite(true) }} />
         </div>
       </main>
+      <BottomNav onSearch={() => setSearchOpen(true)} onMenu={() => setNavOpen(true)} />
       {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
       {newProject && <NewProjectModal onClose={() => setNewProject(false)} />}
       {invite && match && <InviteModal projectId={match.params.projectId} onClose={() => setInvite(false)} />}

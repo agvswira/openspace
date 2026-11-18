@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { UserPlus, Plus, ArrowRight, Users, CalendarDays, CircleDot, MoreHorizontal } from 'lucide-react';
+import { UserPlus, Plus, ArrowRight, Users, CalendarDays, CircleDot } from 'lucide-react';
 import { useMyTasks, useProjects, useSummary } from '../api/hooks';
 import { useAuth } from '../context/AuthContext';
 import { AvatarStack, ErrorState, LoadingBlock, ProgressRing, ProjectMark } from '../components/ui';
 import { StatusBadge } from '../lib/status';
 import { addDays, fmtLong, greeting, startOfDay } from '../lib/format';
 import TaskRow from '../components/tasks/TaskRow';
+import { MoreButton, useMenuBinder } from '../components/ui/ContextMenu';
+import { useProjectMenu } from '../components/layout/projectMenu';
 
 const PROJECT_STATUS = { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE' };
 
@@ -18,6 +20,8 @@ export default function Home() {
   const myTasks = useMyTasks('open');
   const completed = useMyTasks('completed');
   const [showAll, setShowAll] = useState(false);
+  const bind = useMenuBinder();
+  const projectMenu = useProjectMenu();
   // Senin minggu ini: tugas selesai sejak awal minggu ikut tampil (dicentang).
   const weekAgo = addDays(startOfDay(), -((new Date().getDay() + 6) % 7)).getTime();
   // Figma: tugas terbuka ditambah tugas yang baru selesai minggu ini (dicentang dan dicoret).
@@ -81,6 +85,7 @@ export default function Home() {
               to={`/projects/${p.id}/overview`}
               className="card project-card"
               style={{ boxShadow: 'var(--shadow-sm)' }}
+              {...bind(() => projectMenu(p))}
             >
               <div className="row">
                 <ProjectMark project={p} size={32} />
@@ -91,7 +96,9 @@ export default function Home() {
                   <div className="xs muted truncate">{p.description}</div>
                 </div>
                 <ProgressRing percent={p.progress.percent ?? 0} />
-                <MoreHorizontal size={16} className="faint" />
+                <span onClick={(e) => e.preventDefault()}>
+                  <MoreButton label={`Menu ${p.name}`} getItems={() => projectMenu(p)} />
+                </span>
               </div>
               <dl className="kv">
                 <dt>
@@ -139,7 +146,7 @@ export default function Home() {
               minHeight: 170,
             }}
           >
-            <span className="empty-icon" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+            <span className="empty-icon" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)' }}>
               <Plus size={18} />
             </span>
             <strong className="sm">New project</strong>

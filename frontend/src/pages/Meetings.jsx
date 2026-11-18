@@ -12,6 +12,7 @@ import {
   ListChecks,
   Calendar,
   X,
+  ExternalLink,
 } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import { keys, projectTaskKeys, useApiMutation, useMeetings, useMembers } from '../api/hooks';
@@ -31,6 +32,7 @@ import { StatusBadge } from '../lib/status';
 import { addDays, fmtLong, fmtShort, fromInputDate, startOfDay, toInputDate, MONTHS } from '../lib/format';
 import { useCan } from '../components/tasks/TaskDetailPanel';
 import { useToast } from '../context/ToastContext';
+import { useMenuBinder } from '../components/ui/ContextMenu';
 
 function MeetingFormModal({ projectId, meeting, onClose, onSaved }) {
   const { data: members } = useMembers(projectId);
@@ -399,6 +401,7 @@ export default function Meetings() {
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const bindMenu = useMenuBinder();
   const del = useApiMutation((id) => api.delete(`/meetings/${id}`), {
     invalidate: [keys.meetings(projectId), keys.summary],
     onSuccess: () => {
@@ -446,7 +449,7 @@ export default function Meetings() {
           </EmptyState>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
+        <div className="meetings-split" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16 }}>
           <div>
             {groups.map((g) => (
               <div key={g.label} style={{ marginBottom: 12 }}>
@@ -460,6 +463,25 @@ export default function Meetings() {
                         key={m.id}
                         className="card row"
                         onClick={() => setSelectedId(m.id)}
+                        {...bindMenu(() => [
+                          { label: 'Open meeting', icon: ExternalLink, onSelect: () => setSelectedId(m.id) },
+                          {
+                            label: 'Edit meeting…',
+                            icon: Pencil,
+                            disabled: !can('MANAGE_MEETINGS'),
+                            hint: 'Role Anda tidak memiliki izin Manage meetings.',
+                            onSelect: () => setEditing(m),
+                          },
+                          { separator: true },
+                          {
+                            label: 'Delete meeting',
+                            icon: Trash2,
+                            danger: true,
+                            disabled: !can('MANAGE_MEETINGS'),
+                            hint: 'Role Anda tidak memiliki izin Manage meetings.',
+                            onSelect: () => setDeleting(m),
+                          },
+                        ])}
                         style={{
                           padding: 10,
                           cursor: 'pointer',

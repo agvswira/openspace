@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "db:studio": "node scripts/studio.js",
     "db:sync-permissions": "node scripts/sync-permissions.js",
-    "vercel-build": "prisma generate && prisma migrate deploy && node scripts/sync-permissions.js"
+    "vercel-build": "prisma generate && prisma migrate deploy && node scripts/sync-permissions.js",
+    "test": "node --test"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

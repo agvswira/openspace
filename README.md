@@ -8,6 +8,12 @@ Sistem Manajemen Proyek dan Alur Kerja Terintegrasi. Capstone Project Rekayasa P
 | Backend    | Node.js, Express 5, JSON Web Token, bcryptjs, Zod, Nodemailer                                              |
 | Basis data | PostgreSQL (Prisma ORM 6). Untuk pengembangan, PostgreSQL 18 dijalankan otomatis lewat `embedded-postgres` |
 
+## Cara cepat (Windows)
+
+Klik dua kali **`Jalankan-Openspace.bat`**. Pertama kali dijalankan, file ini menginstal dependensi (butuh internet, beberapa menit). Setelah itu aplikasi langsung jalan dan browser terbuka di http://localhost:5180. Tutup jendela hitamnya untuk menghentikan aplikasi.
+
+Syarat: [Node.js](https://nodejs.org) versi 20 atau lebih baru.
+
 ## Menjalankan (Windows/macOS/Linux)
 
 Prasyarat: **Node.js 20 atau lebih baru**. PostgreSQL **tidak perlu** diinstal.
@@ -46,6 +52,7 @@ Login sebagai akun berbeda untuk mencoba pembatasan akses (misalnya Member tidak
 | ------------------ | ------------------------------------------------------ |
 | `npm run db:reset` | Menghapus database lokal dan mengisi ulang data contoh |
 | `npm run build`    | Build frontend untuk produksi (`frontend/dist`)        |
+| `npm test`         | Menjalankan 38 uji unit (backend dan frontend)         |
 | `npm run lint`     | Memeriksa kode dengan ESLint                           |
 | `npm run format`   | Merapikan format seluruh kode dengan Prettier          |
 
@@ -61,6 +68,16 @@ DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/openspace?schema=public
 ### Email
 
 Tanpa `SMTP_HOST`, email undangan dan reset password dicetak di terminal `api` sehingga tautannya bisa langsung disalin ke browser.
+
+## Fitur antarmuka tambahan
+
+- **Dark mode**: ikon matahari/bulan di topbar, atau menu akun / Settings → Light, Dark, System.
+- **Menu klik kanan** pada tugas, proyek, milestone, rapat, dan anggota (tekan lama di layar sentuh, Shift+F10 di keyboard).
+- **Tambah cepat, sembunyikan, hapus dengan Undo, aksi massal, atur kolom, ganti judul langsung** di Board dan List.
+- **Timeline**: seret bar untuk menggeser jadwal, seret tepinya untuk mengubah tanggal, tarik titik di ujung bar ke bar lain untuk membuat prasyarat.
+- **Tampilan mobile**: navigasi bawah, laci menu, tombol + mengambang, dan panel dari bawah layar.
+
+Pemetaan fitur ke materi RPL dan hasil pengujian ada di `docs/Penerapan-Materi-RPL.md`.
 
 ## Struktur
 

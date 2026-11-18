@@ -51,6 +51,88 @@
   --fs-body: 14px;
   --fs-sm: 13px;
   --fs-xs: 12px;
+
+  /* Token turunan: dipakai komponen agar tema gelap cukup mengganti nilai di sini */
+  --hover-overlay: rgba(24, 24, 27, 0.05);
+  --skeleton-hi: #ececee;
+  --auth-hero: linear-gradient(160deg, #eef4ff 0%, #f5f8ff 100%);
+  --primary-border: #bfdbfe;
+  --primary-border-strong: #93c5fd;
+  --focus-ring: rgba(37, 99, 235, 0.15);
+  --backdrop: rgba(24, 24, 27, 0.35);
+  --backdrop-soft: rgba(24, 24, 27, 0.18);
+  --inverse-bg: #18181b;
+  --inverse-text: #ffffff;
+  --toast-error: #7f1d1d;
+  --todo-border: #bfdbfe;
+  --progress-border: #fed7aa;
+  --done-border: #bbf7d0;
+  --overdue-border: #fecaca;
+  --blocked-border: #fde68a;
+  --dep-line: #d97706;
+  --tl-today: rgba(37, 99, 235, 0.06);
+  color-scheme: light;
+}
+
+/* ===== Tema gelap: data-theme di <html> diatur oleh ThemeContext ===== */
+:root[data-theme='dark'] {
+  --bg-app: #09090b;
+  --bg-panel: #18181b;
+  --bg-subtle: #1c1c20;
+  --bg-muted: #27272a;
+  --bg-hover: #27272a;
+  --border: #2e2e33;
+  --border-strong: #3f3f46;
+
+  --text: #fafafa;
+  --text-2: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-faint: #71717a;
+
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-soft: rgba(59, 130, 246, 0.15);
+
+  --todo: #60a5fa;
+  --todo-bg: rgba(59, 130, 246, 0.14);
+  --progress: #fb923c;
+  --progress-bg: rgba(249, 115, 22, 0.14);
+  --done: #4ade80;
+  --done-bg: rgba(34, 197, 94, 0.14);
+  --overdue: #f87171;
+  --overdue-bg: rgba(239, 68, 68, 0.14);
+  --blocked: #fbbf24;
+  --blocked-bg: rgba(245, 158, 11, 0.14);
+  --purple: #c084fc;
+  --purple-bg: rgba(168, 85, 247, 0.15);
+
+  --prio-high: #f87171;
+  --prio-medium: #fb923c;
+  --prio-low: #a1a1aa;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  --hover-overlay: rgba(255, 255, 255, 0.06);
+  --skeleton-hi: #303036;
+  --auth-hero: linear-gradient(160deg, #0f172a 0%, #111827 100%);
+  --primary-border: rgba(59, 130, 246, 0.35);
+  --primary-border-strong: rgba(96, 165, 250, 0.6);
+  --focus-ring: rgba(59, 130, 246, 0.3);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --backdrop-soft: rgba(0, 0, 0, 0.4);
+  --inverse-bg: #fafafa;
+  --inverse-text: #18181b;
+  --toast-error: #991b1b;
+  --todo-border: rgba(59, 130, 246, 0.4);
+  --progress-border: rgba(249, 115, 22, 0.4);
+  --done-border: rgba(34, 197, 94, 0.4);
+  --overdue-border: rgba(239, 68, 68, 0.4);
+  --blocked-border: rgba(245, 158, 11, 0.4);
+  --dep-line: #f59e0b;
+  --tl-today: rgba(59, 130, 246, 0.12);
+  color-scheme: dark;
 }
 
 * {
@@ -145,7 +227,7 @@ p {
   padding: 0 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg-panel);
   color: var(--text);
   font-size: var(--fs-sm);
   font-weight: 500;
@@ -233,7 +315,7 @@ p {
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--bg-panel);
   font-size: var(--fs-sm);
   outline: none;
 }
@@ -248,7 +330,7 @@ p {
 .select:focus,
 .textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 .input-icon {
   position: relative;
@@ -276,7 +358,7 @@ p {
   background: var(--overdue-bg);
   color: var(--overdue);
   font-size: var(--fs-sm);
-  border: 1px solid #fecaca;
+  border: 1px solid var(--overdue-border);
 }
 .form-grid {
   display: grid;
@@ -322,7 +404,7 @@ p {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   display: grid;
   place-items: center;
@@ -341,7 +423,7 @@ p {
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #fff;
+  background: var(--bg-panel);
   color: var(--text-muted);
   font-size: var(--fs-sm);
   cursor: pointer;
@@ -382,10 +464,10 @@ p {
   text-align: left;
 }
 .nav-item:hover {
-  background: rgba(24, 24, 27, 0.05);
+  background: var(--hover-overlay);
 }
 .nav-item.active {
-  background: #fff;
+  background: var(--bg-panel);
   color: var(--text);
   font-weight: 500;
   box-shadow: var(--shadow-sm);
@@ -430,7 +512,7 @@ p {
   width: 100%;
 }
 .account:hover {
-  background: rgba(24, 24, 27, 0.05);
+  background: var(--hover-overlay);
 }
 
 .main {
@@ -485,7 +567,7 @@ p {
   height: 7px;
   border-radius: 50%;
   background: #dc2626;
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--bg-panel);
 }
 .content {
   flex: 1;
@@ -533,7 +615,7 @@ p {
 
 /* ===== Komponen umum ===== */
 .card {
-  background: #fff;
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
@@ -561,7 +643,7 @@ p {
   color: #fff;
   font-weight: 600;
   flex-shrink: 0;
-  border: 2px solid #fff;
+  border: 2px solid var(--bg-panel);
   user-select: none;
 }
 .avatar-photo {
@@ -643,13 +725,13 @@ p {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   font-size: var(--fs-xs);
-  background: #fff;
+  background: var(--bg-panel);
   cursor: pointer;
 }
 .chip.active {
-  background: var(--text);
-  color: #fff;
-  border-color: var(--text);
+  background: var(--inverse-bg);
+  color: var(--inverse-text);
+  border-color: var(--inverse-bg);
 }
 .chip .n {
   color: inherit;
@@ -727,7 +809,7 @@ p {
   color: var(--text-muted);
 }
 .segmented button.active {
-  background: #fff;
+  background: var(--bg-panel);
   color: var(--text);
   box-shadow: var(--shadow-sm);
   font-weight: 500;
@@ -770,7 +852,7 @@ p {
   }
 }
 .skeleton {
-  background: linear-gradient(90deg, #f4f4f5 25%, #ececee 50%, #f4f4f5 75%);
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--skeleton-hi) 50%, var(--bg-muted) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite;
   border-radius: var(--radius);
@@ -785,7 +867,7 @@ p {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(24, 24, 27, 0.35);
+  background: var(--backdrop);
   z-index: 50;
   display: grid;
   place-items: center;
@@ -796,7 +878,7 @@ p {
   max-width: 520px;
   max-height: calc(100vh - 48px);
   overflow: auto;
-  background: #fff;
+  background: var(--bg-panel);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
@@ -830,7 +912,7 @@ p {
   position: fixed;
   inset: 0;
   z-index: 40;
-  background: rgba(24, 24, 27, 0.18);
+  background: var(--backdrop-soft);
 }
 .drawer {
   position: fixed;
@@ -839,7 +921,7 @@ p {
   bottom: 8px;
   width: 480px;
   z-index: 41;
-  background: #fff;
+  background: var(--bg-panel);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -857,7 +939,7 @@ p {
   position: absolute;
   z-index: 60;
   min-width: 200px;
-  background: #fff;
+  background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
@@ -904,14 +986,14 @@ p {
   gap: 10px;
   padding: 10px 14px;
   border-radius: var(--radius);
-  background: var(--text);
-  color: #fff;
+  background: var(--inverse-bg);
+  color: var(--inverse-text);
   font-size: var(--fs-sm);
   box-shadow: var(--shadow-lg);
   max-width: 520px;
 }
 .toast.error {
-  background: #7f1d1d;
+  background: var(--toast-error);
 }
 
 /* ===== Tabel/list ===== */
@@ -962,10 +1044,10 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 100vh;
-  background: #fff;
+  background: var(--bg-panel);
 }
 .auth-hero {
-  background: linear-gradient(160deg, #eef4ff 0%, #f5f8ff 100%);
+  background: var(--auth-hero);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -978,7 +1060,7 @@ p {
   width: 76px;
   height: 76px;
   border-radius: 20px;
-  background: #fff;
+  background: var(--bg-panel);
   box-shadow:
     0 10px 28px rgba(37, 99, 235, 0.12),
     0 2px 6px rgba(37, 99, 235, 0.06);
@@ -1068,14 +1150,14 @@ p {
 }
 .col-body.drop {
   background: var(--primary-soft);
-  outline: 2px dashed #93c5fd;
+  outline: 2px dashed var(--primary-border-strong);
   outline-offset: 2px;
 }
 .task-card {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: #fff;
+  background: var(--bg-panel);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -1203,7 +1285,7 @@ p {
   display: grid;
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--bg-panel);
   z-index: 2;
   border-bottom: 1px solid var(--border);
 }
@@ -1404,7 +1486,7 @@ p {
 }
 .role-item.active {
   background: var(--primary-soft);
-  border-color: #bfdbfe;
+  border-color: var(--primary-border);
 }
 .perm-row {
   display: flex;
@@ -1495,7 +1577,7 @@ p {
   place-items: center;
   border: 1.5px solid var(--border-strong);
   border-radius: 5px;
-  background: #fff;
+  background: var(--bg-panel);
   color: #fff;
   cursor: pointer;
   padding: 0;
@@ -1535,5 +1617,1108 @@ p {
   }
   .board {
     grid-template-columns: repeat(3, minmax(200px, 1fr));
+  }
+}
+
+/* ===== Pilihan tema (Light / Dark / System) ===== */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--radius);
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+}
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  cursor: pointer;
+}
+.segmented button:hover {
+  color: var(--text);
+}
+.segmented button.active {
+  background: var(--bg-panel);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.segmented button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.menu-label {
+  padding: 8px 10px 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  font-weight: 500;
+}
+
+/* ===== Menu klik kanan ===== */
+.ctx-menu {
+  z-index: 120;
+  min-width: 210px;
+  max-width: 280px;
+  outline: none;
+  animation: ctx-in 0.08s ease-out;
+}
+@keyframes ctx-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+.menu-item.focus {
+  background: var(--bg-hover);
+}
+.menu-item .kbd {
+  margin-left: auto;
+}
+.ctx-check {
+  color: var(--primary);
+  font-weight: 600;
+}
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+.toast-action {
+  margin-left: 6px;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.9;
+}
+.toast-action:hover {
+  opacity: 1;
+}
+.hidden-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+
+/* ===== Tambah cepat ===== */
+.quick-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px dashed transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.quick-add-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background: var(--bg-panel);
+}
+.quick-add {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.card-more {
+  width: 24px;
+  height: 24px;
+  margin: -4px -6px -4px 0;
+  opacity: 0.55;
+}
+.task-card:hover .card-more,
+.task-card:focus-within .card-more {
+  opacity: 1;
+}
+
+/* ===== List: pilihan, aksi massal, judul langsung ===== */
+.table-scroll {
+  overflow-x: auto;
+}
+.table tr.selected td {
+  background: var(--primary-soft);
+}
+.table input[type='checkbox'] {
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.inline-title {
+  height: 30px;
+  font-weight: 500;
+}
+.quick-row td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.bulk-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-lg);
+  animation: ctx-in 0.12s ease-out;
+}
+.bulk-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+.btn-danger-soft {
+  color: var(--overdue);
+}
+.btn-danger-soft:hover:not(:disabled) {
+  background: var(--overdue-bg);
+  border-color: var(--overdue-border);
+}
+
+/* ===== Timeline: seret jadwal & prasyarat ===== */
+.tl-links {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+.tl-link-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 9;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.tl-link-hit:hover {
+  stroke: var(--focus-ring);
+}
+.tl-bar.editable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.tl-bar.active {
+  cursor: grabbing;
+  box-shadow: var(--shadow-lg);
+  z-index: 4;
+  outline: 2px solid var(--primary);
+}
+.tl-bar.link-target {
+  outline: 2px dashed var(--primary);
+  outline-offset: 2px;
+  z-index: 4;
+}
+.tl-bar:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.tl-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 1;
+}
+.tl-handle.left {
+  left: 0;
+}
+.tl-handle.right {
+  right: 12px;
+}
+.tl-bar:hover .tl-handle {
+  background: var(--hover-overlay);
+}
+.tl-connector {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  background: var(--bg-panel);
+  cursor: crosshair;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 2;
+}
+.tl-bar:hover .tl-connector,
+.tl-bar:focus-within .tl-connector,
+.timeline.is-dragging .tl-connector {
+  opacity: 1;
+}
+.timeline.is-dragging {
+  user-select: none;
+}
+.tl-tip {
+  position: absolute;
+  z-index: 6;
+  max-width: 260px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--inverse-bg);
+  color: var(--inverse-text);
+  font-size: var(--fs-xs);
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+@media (hover: none) {
+  /* Layar sentuh: titik penghubung selalu terlihat karena tidak ada hover */
+  .tl-connector {
+    opacity: 1;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+  }
+  .tl-handle {
+    width: 12px;
+  }
+}
+.tl-bar.linkable {
+  padding-right: 18px;
+}
+
+/* =====================================================================
+   Tampilan mobile (Figma: Screens · Mobile). Desktop tidak berubah.
+   ===================================================================== */
+.mobile-only {
+  display: none !important;
+}
+.sidebar-backdrop,
+.ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--backdrop);
+  animation: fade-in 0.15s ease-out;
+}
+.ctx-backdrop {
+  z-index: 115;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Tablet: sidebar lebih ramping, grid lebih sedikit kolom */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 212px;
+  }
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .calendar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .calendar > aside {
+    margin-top: 0 !important;
+  }
+  .settings-section {
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: inline-flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* --- Kerangka: sidebar menjadi laci, konten penuh, navigasi bawah --- */
+  .app {
+    height: 100dvh;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 80;
+    width: min(300px, 86vw);
+    background: var(--bg-panel);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    padding-top: 14px;
+  }
+  .sidebar.open {
+    transform: none;
+  }
+  .sidebar-close {
+    position: absolute;
+    top: 12px;
+    right: 10px;
+    z-index: 1;
+  }
+  .sidebar .ws-switch {
+    padding-right: 40px;
+  }
+  .main {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+  .topbar {
+    height: 52px;
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .crumbs {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .crumbs > span:not(.current),
+  .crumbs > svg {
+    display: none;
+  }
+  .crumbs .current {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .topbar-actions {
+    gap: 2px;
+  }
+
+  .mobile-tabs {
+    display: flex !important;
+    gap: 4px;
+    padding: 6px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mobile-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .mobile-tab.active {
+    color: var(--text);
+    background: var(--bg-muted);
+    border-color: var(--border);
+    font-weight: 500;
+  }
+
+  .bottom-nav {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    height: calc(60px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+  }
+  .bottom-nav > span {
+    display: flex;
+  }
+  .bnav-item {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  .bnav-item.active {
+    color: var(--primary);
+  }
+  .bnav-count {
+    position: absolute;
+    top: 4px;
+    left: calc(50% + 6px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--prio-high);
+    color: #fff;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+  }
+  .fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 55;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    cursor: pointer;
+  }
+
+  /* --- Halaman --- */
+  .page,
+  .page-wide {
+    padding: 16px 16px 24px;
+  }
+  .page-head {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .page-head > .row {
+    flex-wrap: wrap;
+  }
+  .page-title {
+    font-size: 22px;
+  }
+  .row-between {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+  .tab {
+    white-space: nowrap;
+  }
+  .input-icon {
+    width: auto !important;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .project-grid,
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+  .settings-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 0;
+  }
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .members-split,
+  .meetings-split,
+  .roles-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .perm-row {
+    gap: 12px;
+  }
+
+  /* Board: kolom digeser horizontal satu per satu */
+  .board {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin: 0 -16px;
+    padding: 0 16px 8px;
+  }
+  .board > section {
+    flex: 0 0 84vw;
+    scroll-snap-align: center;
+  }
+  .card-more {
+    opacity: 1;
+    width: 32px;
+    height: 32px;
+  }
+
+  /* List & tabel: geser horizontal */
+  .table {
+    min-width: 640px;
+  }
+  .bulk-bar {
+    left: 8px;
+    right: 8px;
+    transform: none;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Calendar & Timeline */
+  .cal-grid {
+    font-size: 11px;
+  }
+  .cal-ev .truncate {
+    display: none;
+  }
+  .cal-ev {
+    justify-content: center;
+    padding: 2px;
+  }
+  .tl-legend {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .timeline {
+    min-height: 360px;
+  }
+
+  /* Task row (Home/My tasks): meta disusun di bawah judul */
+  .task-row {
+    flex-wrap: wrap;
+  }
+  .task-row-meta {
+    width: 100%;
+    padding-left: 28px;
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  .task-row-col {
+    width: auto !important;
+  }
+
+  /* Dialog → panel bawah, detail tugas → layar penuh */
+  .overlay {
+    place-items: end stretch;
+    padding: 0;
+  }
+  .modal,
+  .modal-lg {
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: 16px 16px 0 0;
+    animation: sheet-up 0.2s ease-out;
+  }
+  .modal-foot {
+    flex-wrap: wrap;
+  }
+  /* Urutan lapisan di ponsel: konten < navigasi bawah < laci/detail < dialog < menu < toast */
+  .drawer {
+    inset: 0;
+    width: auto;
+    border-radius: 0;
+    z-index: 91;
+  }
+  .drawer-overlay {
+    z-index: 90;
+  }
+  .overlay {
+    z-index: 95;
+  }
+  .popover:not(.ctx-menu) {
+    max-width: calc(100vw - 16px);
+    z-index: 100;
+  }
+  .toasts {
+    z-index: 130;
+  }
+  .detail-head .row-between {
+    flex-wrap: nowrap;
+  }
+  .detail-head .row-between > .mono {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Menu klik kanan sebagai bottom sheet (dibuka dengan tekan lama) */
+  .ctx-menu.sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    max-width: none;
+    width: auto;
+    max-height: 75dvh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 8px 8px calc(12px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.2s ease-out;
+  }
+  .ctx-menu.sheet::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 2px auto 8px;
+    border-radius: 2px;
+    background: var(--border-strong);
+  }
+  .ctx-menu.sheet .menu-item {
+    height: 46px;
+    font-size: var(--fs-body);
+  }
+  .ctx-menu.sheet .ctx-menu.sheet {
+    z-index: 121;
+  }
+
+  /* Toast di atas navigasi bawah */
+  .toasts {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+  }
+  .toast {
+    max-width: none;
+  }
+
+  /* Auth: tanpa panel hero */
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .auth-hero {
+    display: none;
+  }
+}
+
+/* Layar sentuh: target sentuh minimal ~40px */
+@media (hover: none) and (pointer: coarse) {
+  .icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .menu-item {
+    min-height: 40px;
+  }
+}
+
+/* ===== Timeline: navigasi dengan geser (touchpad / scrollbar) ===== */
+.timeline {
+  overscroll-behavior-x: contain; /* geser dua jari tidak memicu Back/Forward browser */
+  scrollbar-width: auto;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.timeline:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.timeline::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+.timeline::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid var(--bg-panel);
+}
+.timeline::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+.timeline::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tl-offscreen {
+  position: absolute;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 190px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.tl-offscreen.right {
+  transform: translateX(-100%);
+}
+.tl-offscreen:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* =====================================================================
+   Transisi & animasi mikro. Singkat (120–220 ms) dan halus: memberi umpan balik
+   saat diklik/diarahkan tanpa memperlambat pekerjaan. Dimatikan otomatis bila
+   pengguna memilih "kurangi animasi" di sistem operasi.
+   ===================================================================== */
+:root {
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 0.12s;
+  --dur: 0.18s;
+}
+
+/* --- Elemen yang bisa diklik: warna berubah halus, sedikit "tertekan" saat diklik --- */
+.btn,
+.icon-btn,
+.tab,
+.nav-item,
+.menu-item,
+.chip,
+.link,
+.account,
+.search-trigger,
+.quick-add-btn,
+.segmented button,
+.mobile-tab,
+.bnav-item,
+.tl-offscreen,
+.toast-action,
+.task-check {
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.chip:active,
+.segmented button:active,
+.quick-add-btn:active,
+.tl-offscreen:active,
+.toast-action:active {
+  transform: scale(0.96);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+.nav-item:active,
+.menu-item:active:not(:disabled),
+.bnav-item:active,
+.mobile-tab:active {
+  transform: scale(0.98);
+}
+.fab {
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+.fab:active {
+  transform: scale(0.92);
+}
+
+/* Ikon chevron sidebar berputar halus saat proyek dibuka/ditutup */
+.nav-sub {
+  animation: sub-in var(--dur) var(--ease);
+  transform-origin: top;
+}
+@keyframes sub-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --- Kartu: terangkat sedikit saat diarahkan, tertekan saat diklik --- */
+.task-card,
+.project-card,
+.tl-bar,
+.cal-ev,
+.role-item {
+  transition:
+    transform var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease),
+    filter var(--dur) var(--ease),
+    opacity var(--dur) var(--ease);
+}
+.task-card:hover,
+.project-card:hover {
+  transform: translateY(-1px);
+}
+.project-card:hover {
+  box-shadow: var(--shadow);
+}
+.task-card:active,
+.project-card:active {
+  transform: translateY(0) scale(0.99);
+}
+.tl-bar.active,
+.timeline.is-dragging .tl-bar {
+  transition: none; /* posisi bar mengikuti pointer tanpa jeda */
+}
+.table tr.clickable td,
+.list-row.clickable {
+  transition: background-color var(--dur-fast) var(--ease);
+}
+.col-body {
+  transition:
+    background-color var(--dur) var(--ease),
+    outline-color var(--dur) var(--ease);
+}
+
+/* Checkbox selesai: "pop" kecil saat dicentang */
+.task-check.checked svg {
+  animation: check-pop 0.22s var(--ease);
+}
+@keyframes check-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* Progres bergerak halus saat status tugas berubah */
+.progress > span {
+  transition: width 0.5s var(--ease-in-out);
+}
+svg circle {
+  transition: stroke-dashoffset 0.5s var(--ease-in-out);
+}
+
+/* --- Pindah halaman & pindah tampilan (Board/List/Calendar/Timeline) ---
+   Utama: View Transitions API (lihat main.jsx). Hanya area konten yang beranimasi: halaman
+   lama memudar cepat, halaman baru masuk dengan fade + naik sedikit. Sidebar & topbar diam,
+   sedangkan penanda menu/tab aktif "meluncur" ke posisi barunya.
+   Cadangan (browser tanpa View Transitions): fade-in saja. Sengaja tanpa transform agar
+   elemen position:fixed di dalam halaman (bilah aksi massal, tombol +) tidak bergeser. */
+.page,
+.page-wide,
+.view-swap {
+  animation: page-in 0.2s var(--ease);
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+@supports (view-transition-name: none) {
+  .page,
+  .page-wide,
+  .view-swap {
+    animation: none;
+  }
+  .content {
+    view-transition-name: content;
+  }
+  .sidebar .nav-item.active {
+    view-transition-name: nav-active;
+  }
+  .tabs .tab.active {
+    view-transition-name: tab-active;
+  }
+  .mobile-tabs .mobile-tab.active {
+    view-transition-name: mobile-tab-active;
+  }
+  .bottom-nav .bnav-item.active {
+    view-transition-name: bnav-active;
+  }
+}
+/* Seluruh halaman (root) tidak di-crossfade: hanya bagian bernama di atas yang bergerak. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(content) {
+  animation: vt-out 0.14s var(--ease-in-out) both;
+}
+::view-transition-new(content) {
+  animation: vt-in 0.28s var(--ease) both;
+}
+::view-transition-group(content) {
+  animation-duration: 0.28s;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+::view-transition-group(nav-active),
+::view-transition-group(tab-active),
+::view-transition-group(mobile-tab-active),
+::view-transition-group(bnav-active) {
+  animation-duration: 0.28s;
+  animation-timing-function: var(--ease);
+}
+.view-swap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Dialog, panel, menu, notifikasi --- */
+.overlay,
+.drawer-overlay {
+  animation: fade-in var(--dur) var(--ease);
+}
+.drawer {
+  animation: drawer-in 0.22s var(--ease);
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+.popover:not(.ctx-menu) {
+  animation: pop-in var(--dur-fast) var(--ease);
+  transform-origin: top;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+.toast {
+  animation: toast-in 0.22s var(--ease);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.hidden-bar,
+.tl-tip {
+  animation: fade-in var(--dur) var(--ease);
+}
+@media (min-width: 769px) {
+  .modal {
+    animation: modal-in 0.2s var(--ease);
+  }
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+}
+
+/* --- Ganti tema: warna berpindah lembut (kelas dipasang sesaat oleh ThemeContext) --- */
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after {
+  transition:
+    background-color 0.3s var(--ease-in-out),
+    color 0.3s var(--ease-in-out),
+    border-color 0.3s var(--ease-in-out),
+    fill 0.3s var(--ease-in-out),
+    stroke 0.3s var(--ease-in-out) !important;
+}
+
+/* --- Aksesibilitas: hormati pengaturan "kurangi animasi" --- */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Pilihan tema di dalam menu akun: dibagi rata selebar menu agar tidak melewati sidebar */
+.popover .segmented {
+  display: flex;
+  width: 100%;
+}
+.popover .segmented button {
+  flex: 1;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+/* Penanda tugas di luar layar (kanan): efek tekan tetap mempertahankan geser -100% */
+.tl-offscreen.right:active {
+  transform: translateX(-100%) scale(0.96);
+}
+/* Bilah aksi massal: animasi masuk mempertahankan posisi tengah (translateX(-50%)) */
+.bulk-bar {
+  animation: bulk-in 0.18s var(--ease);
+}
+@keyframes bulk-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+@media (max-width: 768px) {
+  .bulk-bar {
+    animation: fade-in 0.18s var(--ease);
   }
 }
