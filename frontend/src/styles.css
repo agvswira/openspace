@@ -1800,3 +1800,111 @@ p {
   background: var(--overdue-bg);
   border-color: var(--overdue-border);
 }
+
+/* ===== Timeline: seret jadwal & prasyarat ===== */
+.tl-links {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+.tl-link-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 9;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.tl-link-hit:hover {
+  stroke: var(--focus-ring);
+}
+.tl-bar.editable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.tl-bar.active {
+  cursor: grabbing;
+  box-shadow: var(--shadow-lg);
+  z-index: 4;
+  outline: 2px solid var(--primary);
+}
+.tl-bar.link-target {
+  outline: 2px dashed var(--primary);
+  outline-offset: 2px;
+  z-index: 4;
+}
+.tl-bar:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.tl-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 1;
+}
+.tl-handle.left {
+  left: 0;
+}
+.tl-handle.right {
+  right: 12px;
+}
+.tl-bar:hover .tl-handle {
+  background: var(--hover-overlay);
+}
+.tl-connector {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  background: var(--bg-panel);
+  cursor: crosshair;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  z-index: 2;
+}
+.tl-bar:hover .tl-connector,
+.tl-bar:focus-within .tl-connector,
+.timeline.is-dragging .tl-connector {
+  opacity: 1;
+}
+.timeline.is-dragging {
+  user-select: none;
+}
+.tl-tip {
+  position: absolute;
+  z-index: 6;
+  max-width: 260px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--inverse-bg);
+  color: var(--inverse-text);
+  font-size: var(--fs-xs);
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+@media (hover: none) {
+  /* Layar sentuh: titik penghubung selalu terlihat karena tidak ada hover */
+  .tl-connector {
+    opacity: 1;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+  }
+  .tl-handle {
+    width: 12px;
+  }
+}
+.tl-bar.linkable {
+  padding-right: 18px;
+}

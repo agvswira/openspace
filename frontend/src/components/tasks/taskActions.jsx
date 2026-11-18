@@ -305,6 +305,28 @@ export function useTaskActions(projectId, { onOpen } = {}) {
         ? patch(task, { title: title.trim() }, 'Judul diperbarui', 'Judul tidak dapat diubah')
         : Promise.resolve(),
     setStatusMany,
+    // Timeline: geser/ubah durasi bar dan tarik garis prasyarat.
+    setDates: (task, body) => patch(task, body, 'Jadwal diperbarui', 'Jadwal tidak dapat diubah'),
+    link: (prerequisite, task) =>
+      api
+        .post(`/tasks/${task.id}/prerequisites`, { prerequisiteId: prerequisite.id })
+        .then(() => refresh())
+        .then(() =>
+          toast(`"${task.title}" sekarang menunggu "${prerequisite.title}"`, 'success', {
+            action: {
+              label: 'Undo',
+              onClick: () => api.delete(`/tasks/${task.id}/prerequisites/${prerequisite.id}`).then(refresh),
+            },
+          }),
+        )
+        .catch(fail('Prasyarat tidak dapat ditambahkan')),
+    unlink: (task, prerequisite) =>
+      api
+        .delete(`/tasks/${task.id}/prerequisites/${prerequisite.id}`)
+        .then(() => refresh())
+        .then(() => toast('Hubungan prasyarat dihapus'))
+        .catch(fail('Prasyarat tidak dapat dihapus')),
+    canLink: can('MANAGE_DEPENDENCIES'),
     deleteMany: scheduleDelete,
     canEditAll: can('EDIT_ALL_TASKS'),
   };
