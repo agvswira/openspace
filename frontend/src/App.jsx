@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import AppLayout from './components/layout/AppLayout';
 import { SignIn, SignUp, ForgotPassword, ResetPassword, AcceptInvite } from './pages/AuthPages';
+import Landing from './pages/Landing';
 import Home from './pages/Home';
 import MyTasks from './pages/MyTasks';
 import Overview from './pages/Overview';
@@ -12,7 +13,8 @@ import Members from './pages/Members';
 import Roles from './pages/Roles';
 import { ProjectSettings, WorkspaceSettings } from './pages/Settings';
 
-// Rute yang memerlukan login; pengunjung diarahkan ke halaman Sign in.
+// Rute yang memerlukan login. Pengunjung yang membuka "/" melihat landing page;
+// halaman lain mengarahkan ke Sign in.
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -22,6 +24,7 @@ function RequireAuth({ children }) {
         <div className="spinner" />
       </div>
     );
+  if (!user && location.pathname === '/') return <Landing />;
   if (!user) return <Navigate to="/signin" replace state={{ from: location.pathname + location.search }} />;
   return children;
 }
@@ -51,6 +54,7 @@ export default function App() {
           </GuestOnly>
         }
       />
+      <Route path="/welcome" element={<Landing />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/invite/:token" element={<AcceptInvite />} />

@@ -73,7 +73,7 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
       </div>
 
       <button className="search-trigger" onClick={onSearch}>
-        <Search size={15} /> Search <span className="kbd">⌘K</span>
+        <Search size={15} /> Search
       </button>
 
       <div className="nav-section">
@@ -140,10 +140,6 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
       </div>
 
       <div className="sidebar-footer">
-        <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Settings size={16} />
-          Workspace settings
-        </NavLink>
         <Menu
           align="left"
           width="100%"
