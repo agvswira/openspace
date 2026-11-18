@@ -5,7 +5,7 @@
   <p>
     <a href="https://openspace-pm.vercel.app"><strong>Live App</strong></a>
     &nbsp;|&nbsp;
-    <a href="#5-penerapan-materi-rekayasa-perangkat-lunak"><strong>Penerapan Materi RPL</strong></a>
+    <a href="#5-cara-openspace-dibangun"><strong>Cara dibangun</strong></a>
     &nbsp;|&nbsp;
     <a href="#4-tur-produk"><strong>Tur produk</strong></a>
     &nbsp;|&nbsp;
@@ -98,67 +98,94 @@ Semua gambar diambil dari data contoh proyek "Penyelenggaraan kegiatan" yang dib
 | <img src="docs/readme/ponsel-overview.png" width="70%" alt="Overview di layar ponsel">                                                                   | <img src="docs/readme/ponsel-board.png" width="70%" alt="Board di layar ponsel dengan navigasi bawah">                     |
 | Kartu ringkasan menjadi grid dua kolom, tab proyek bisa digeser di atas, dan navigasi utama pindah ke bawah layar.                                       | Kolom Board digeser ke samping, tombol + mengambang untuk tugas baru, dan navigasi Home, My tasks, Search, Inbox, Account. |
 
-## 5. Penerapan Materi Rekayasa Perangkat Lunak
+## 5. Cara Openspace dibangun
 
-Bagian ini memetakan [materi kuliah](https://drive.google.com/drive/folders/1HN5IAR8tsiA-WGSGc8PtaxV2D2Hj8ErA) ke keputusan nyata di Openspace. Materinya mengikuti buku _Software Engineering_ edisi 7 karya Ian Sommerville. Setiap baris menunjuk ke kode, konfigurasi, atau riwayat repository yang bisa diperiksa. Rincian pengembangan lanjutan (kebutuhan tambahan, ISO/IEC 25010, aturan emas Shneiderman, dan 21 skenario black-box) ada di [`docs/Penerapan-Materi-RPL.md`](docs/Penerapan-Materi-RPL.md).
+Bagian ini menjelaskan proses dan keputusan di balik Openspace, dari rancangan di Figma sampai rilis. Setiap klaim menunjuk ke kode, konfigurasi, atau riwayat repository yang bisa diperiksa. Rincian pengembangan lanjutan dan 21 skenario pengujian black-box ada di [dokumen pengembangan lanjutan](docs/Penerapan-Materi-RPL.md).
 
-| Materi                     | Topik di slide                                                                               | Bagian                             |
-| -------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------- |
-| 1. Pengantar RPL           | Atribut perangkat lunak yang baik, tantangan RPL, tanggung jawab profesional dan etika, CASE | [5.1](#51-pengantar-rpl)           |
-| 2. Socio-technical Systems | Emergent properties, jenis kebutuhan sistem, proses desain sistem, evolusi                   | [5.2](#52-socio-technical-systems) |
-| 3. Software Processes      | Model proses, rekayasa kebutuhan, aktivitas desain, tahap pengujian, RUP, klasifikasi CASE   | [5.3](#53-software-processes)      |
-| 4. Project Management      | Aktivitas manajemen, rencana proyek, milestone, penjadwalan, manajemen risiko                | [5.4](#54-project-management)      |
+### 5.1 Dari wireframe ke prototipe
 
-### 5.1 Pengantar RPL
+Antarmuka dirancang di Figma sebelum kode ditulis, dalam dua tahap: wireframe untuk menguji struktur dan alur, lalu prototipe untuk menetapkan tampilan akhir. File Figma-nya memisahkan kedua tahap ke halaman **WIREFRAME** dan **PROTOTYPE**.
 
-**Atribut perangkat lunak yang baik.** Slide menyebut empat atribut: _maintainability_, _dependability_, _efficiency_, dan _acceptability_.
+<!-- figma-editor -->
 
-| Atribut         | Penerapan di Openspace                                                                                                                                                                                                                                                                                                                                                                                                          |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Maintainability | Monorepo dengan batas yang jelas: [`backend/`](backend) dan [`frontend/`](frontend). Aturan bisnis ditulis sebagai fungsi murni di [`taskRules.js`](backend/src/lib/taskRules.js) dan [`taskGuards.js`](frontend/src/lib/taskGuards.js), sehingga bisa diuji tanpa browser atau database. ESLint dan Prettier menjaga gaya kode, dan [`CONTRIBUTING.md`](CONTRIBUTING.md) mengatur branch, format commit, dan kepemilikan file. |
-| Dependability   | Password disimpan sebagai hash bcrypt. Token reset password dan undangan hanya disimpan hash SHA-256-nya, sekali pakai, dan punya masa berlaku ([`tokens.js`](backend/src/lib/tokens.js)). Semua input divalidasi Zod, dan perubahan yang saling terkait dibungkus transaksi Prisma.                                                                                                                                            |
-| Efficiency      | Empat tampilan tugas berbagi satu cache React Query, jadi data tugas tidak diambil ulang per tampilan. Backend berjalan di region Singapura (`sin1`), sedekat mungkin dengan database Neon.                                                                                                                                                                                                                                     |
-| Acceptability   | Status selalu tampil sebagai ikon dan teks, bukan warna saja. Setiap penolakan menyebut alasannya, misalnya "Tugas ini masih menunggu: Persetujuan desain". Tersedia navigasi keyboard, tema gelap, dan tata letak ponsel.                                                                                                                                                                                                      |
+**Tahap 1: wireframe.** Wireframe dibuat hitam-putih tanpa warna, supaya diskusi fokus pada isi halaman dan urutan langkah, bukan gaya. Ada 12 frame dalam tiga kelompok:
 
-**Tantangan RPL.** Slide menyebut _heterogeneity_, _delivery_, dan _trust_:
+| Kelompok         | Frame                                                                             |
+| ---------------- | --------------------------------------------------------------------------------- |
+| Tugas            | Dashboard proyek, Kanban, Detail tugas, Proyek kosong, Memuat tugas, Gagal memuat |
+| Rapat            | Rapat, Form tugas dari action item, Rapat tanpa izin                              |
+| Anggota dan role | Anggota, Editor role, Role masih dipakai                                          |
 
-- **Heterogeneity:** aplikasi yang sama berjalan di desktop, tablet, ponsel, tema terang dan gelap, serta di dua lingkungan: laptop (PostgreSQL bawaan lewat `embedded-postgres`) dan cloud (Vercel serverless dengan Neon).
-- **Delivery:** setiap fitur dikirim lewat branch kecil dan Pull Request. Merge ke `main` langsung memicu deploy production di Vercel.
-- **Trust:** izin selalu diperiksa di backend; antarmuka hanya menonaktifkan tombol. Mematikan JavaScript atau memanggil API langsung tidak memberi akses tambahan.
+Keadaan khusus (data kosong, memuat, gagal, tanpa izin, dan tindakan yang ditolak) sudah dirancang sejak wireframe, bukan ditambahkan belakangan. Contohnya, frame _Rapat tanpa izin_ menetapkan bahwa Member tetap bisa membaca rapat tetapi tidak bisa mengubahnya, dan frame _Role masih dipakai_ menetapkan pesan penolakan beserta jalan keluarnya.
 
-**Tanggung jawab profesional.**
+**Tahap 2: prototipe.** Halaman PROTOTYPE berisi sistem desain (token warna, skala tipografi Geist, dan komponen), layar desktop, dialog dan keadaan khusus, layar autentikasi, serta layar ponsel. Perubahan utama dari wireframe:
 
-| Isu di slide                 | Penerapan                                                                                                                                                                                                              |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Confidentiality              | Data proyek hanya bisa dibaca anggotanya. Secret tidak pernah masuk repository: hanya [`backend/.env.example`](backend/.env.example) tanpa nilai asli, dan nilai production disimpan di pengaturan environment Vercel. |
-| Competence                   | Keterbatasan sistem ditulis terbuka di [bagian 11](#11-keterbatasan). Klaim di README dan laporan dicocokkan dengan kode, misalnya jumlah uji unit dan aturan izin.                                                    |
-| Intellectual property rights | Library, font, dan referensi dicantumkan beserta lisensinya di [bagian 10](#10-referensi-dan-kredit).                                                                                                                  |
-| Computer misuse              | Percobaan login dibatasi per email ([`rateLimit.js`](backend/src/lib/rateLimit.js)), dan seed yang menghapus seluruh data menolak berjalan di production ([`seed.js`](backend/prisma/seed.js)).                        |
+| Di wireframe                                                    | Di prototipe                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Tampilan tugas hanya Kanban dan Daftar                          | Empat tampilan: Board, List, Calendar, dan Timeline                                        |
+| Menu proyek terpisah dengan tombol "Kembali ke proyek"          | Satu sidebar berisi workspace, pencarian, dan daftar proyek beserta submenunya             |
+| Status dan prioritas ditulis sebagai teks biasa                 | Label status dan prioritas dengan ikon dan teks berkontras tinggi                          |
+| Prasyarat hanya tertulis sebagai teks di kartu dan detail tugas | Timeline menampilkan status, penanggung jawab, dan garis ketergantungan di dalam bar       |
+| Izin role berupa daftar centang                                 | Halaman Roles dengan pola daftar dan detail, ditambah dialog Compare roles yang hanya-baca |
+| Belum ada gaya visual                                           | Sistem desain yang dipakai ulang di semua layar, termasuk tata letak ponsel                |
 
-### 5.2 Socio-technical Systems
+Halaman Roles sengaja tidak memakai tabel izin dengan semua role sebagai kolom. Tabel seperti itu sulit dibaca dan rawan salah ubah ketika jumlah role bertambah.
 
-Openspace adalah sistem sosio-teknis: kegunaannya baru muncul ketika teknologi (aplikasi web), orang (Owner, Koordinator, Member), dan proses organisasi (rapat, pembagian tugas, tenggat) bekerja bersama. Contohnya, prasyarat tugas hanya berguna kalau tim memang mencatat urutan kerjanya.
+**Tahap 3: implementasi.** Kode mengikuti prototipe secara langsung. Komentar di komponen menyebut frame acuannya, misalnya navigasi bawah ponsel di [`AppLayout.jsx`](frontend/src/components/layout/AppLayout.jsx) dan menu tekan lama di [`ContextMenu.jsx`](frontend/src/components/ui/ContextMenu.jsx). Data contoh di [`seed.js`](backend/prisma/seed.js) juga memakai isi prototipe: proyek "Penyelenggaraan kegiatan", tugas, rapat, dan anggotanya.
 
-**Jenis kebutuhan sistem.** Slide membagi kebutuhan menjadi tiga jenis. Daftar lengkapnya ada di laporan (FR-01 sampai FR-19 dan Tabel 2.3).
+| Wireframe                                                                                                                                                                                               | Aplikasi jadi                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="docs/readme/figma/wireframe-dashboard.png" alt="Wireframe Dashboard proyek: empat kartu angka, progres proyek, tugas yang perlu ditindaklanjuti, dan milestone">                              | <img src="docs/readme/overview.png" alt="Overview Openspace: kartu angka, status tugas, milestone berikutnya, tugas perlu perhatian, dan beban kerja anggota"> |
+| Dashboard: empat kartu angka, progres, tugas yang perlu ditindaklanjuti, dan satu milestone.                                                                                                            | Overview: kartu angka yang sama, ditambah beban kerja per anggota dan rincian milestone.                                                                       |
+| <img src="docs/readme/figma/wireframe-kanban.png" alt="Wireframe Kanban dengan kolom To Do, In Progress, dan Done">                                                                                     | <img src="docs/readme/board.png" alt="Board Openspace dengan kolom To do, In progress, dan Done">                                                              |
+| Kanban dengan tombol Kanban, Daftar, dan Filter anggota.                                                                                                                                                | Board dengan empat tab tampilan, pencarian, filter, dan tambah cepat.                                                                                          |
+| <img src="docs/readme/figma/wireframe-detail-tugas.png" alt="Wireframe detail tugas Pencetakan materi: kotak Terhambat, penanggung jawab, prasyarat, rapat asal, dan tombol Mulai tugas yang nonaktif"> | <img src="docs/readme/detail.png" alt="Panel detail tugas Pencetakan materi berstatus Blocked">                                                                |
+| Detail tugas sebagai halaman penuh, dengan penanda terhambat dan rapat asal.                                                                                                                            | Detail tugas sebagai panel di kanan, jadi konteks halaman tetap terlihat.                                                                                      |
+| <img src="docs/readme/figma/wireframe-rapat.png" alt="Wireframe rapat perencanaan: tanggal, peserta, catatan, dan dua action item dengan tombol Buka tugas dan Buat tugas">                             | <img src="docs/readme/meetings.png" alt="Halaman Meetings Openspace dengan daftar rapat dan detail rapat terpilih">                                            |
+| Satu rapat dengan action item yang sudah atau belum menjadi tugas.                                                                                                                                      | Daftar rapat di kiri dan detail di kanan; action item menampilkan status tugasnya.                                                                             |
 
-| Jenis                                       | Contoh di Openspace                                                                                                                                                                                                                                                  |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Abstract functional requirements            | Mengelola proyek, anggota, tugas, prasyarat, rapat, milestone, dan notifikasi.                                                                                                                                                                                       |
-| System properties (non-fungsional)          | Password di-hash, token sekali pakai, status tidak dibedakan hanya dengan warna, empat tampilan membaca data yang sama.                                                                                                                                              |
-| Undesirable characteristics ("_shall-not_") | Pengguna **tidak boleh** melihat proyek yang bukan miliknya. Member **tidak boleh** mengubah tugas orang lain. Prasyarat **tidak boleh** membentuk siklus. Satu action item **tidak boleh** menghasilkan dua tugas. Role yang masih dipakai **tidak boleh** dihapus. |
+### 5.2 Pengembangan bertahap
 
-**Emergent properties.** Keamanan Openspace bukan milik satu komponen. Keamanan muncul dari gabungan middleware akses, constraint unik di database (misalnya satu anggota hanya punya satu role per proyek), validasi input, dan antarmuka yang menonaktifkan aksi terlarang. Karena itu sifat seperti ini hanya bisa diuji setelah semua bagian terintegrasi: pengujian API dengan empat role dijalankan terhadap aplikasi yang berjalan, bukan per fungsi.
+Setelah prototipe disepakati, sistem dikirim dalam beberapa inkremen. Fitur dengan prioritas tertinggi dikerjakan lebih dulu, dan setiap inkremen menghasilkan aplikasi yang tetap bisa dijalankan.
 
-**Proses desain sistem.** Langkah di slide diterapkan sebagai berikut:
+| Inkremen           | Pull Request   | Isi                                                                                                                                     |
+| ------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Fondasi backend | #1 sampai #6   | Setup Express, skema Prisma dan migrasi, autentikasi JWT, pemeriksaan izin, endpoint proyek, anggota, role, tugas, milestone, dan rapat |
+| 2. Antarmuka       | #7 sampai #16  | Setup Vite, komponen UI, layout dan routing, halaman auth, empat tampilan tugas, Overview, Milestones, Meetings, Members, Roles         |
+| 3. Siap production | #17 sampai #22 | Pengamanan akun (pembatasan login, password untuk ganti email), deploy backend dan frontend di Vercel, rilis ke `main`                  |
+| 4. Penyempurnaan   | #23 sampai #27 | Dark mode, menu klik kanan, Timeline interaktif, tampilan ponsel, transisi, 43 uji unit, README                                         |
 
-| Langkah                      | Hasil                                                                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Partition requirements       | Kebutuhan dikelompokkan: akun, proyek dan anggota, role dan izin, tugas, kolaborasi, rapat, notifikasi.                      |
-| Identify sub-systems         | Frontend React, backend REST API, database PostgreSQL, layanan email.                                                        |
-| Assign requirements          | Pemeriksaan izin dan aturan bisnis di backend; penyajian dan interaksi di frontend; integritas relasi di database.           |
-| Define sub-system interfaces | REST API dengan JSON antara frontend dan backend, Prisma antara backend dan database, SMTP antara backend dan layanan email. |
+Setiap inkremen melewati Pull Request ke `develop`, lalu dirilis ke `main`. Riwayatnya bisa ditelusuri di tab [Pull requests](https://github.com/agvswira/openspace/pulls?q=is%3Apr+is%3Amerged).
 
-Model arsitekturnya digambarkan sebagai diagram blok, seperti yang dianjurkan slide _System modelling_:
+Kebutuhan disusun dalam empat langkah:
+
+1. **Menilai kelayakan:** cakupan dipilih sesuai kemampuan tim dan layanan gratis yang tersedia. Rapat dicatat manual, hasil kerja disimpan sebagai link (bukan unggahan berkas), dan tidak ada chat langsung antaranggota.
+2. **Menggali kebutuhan:** studi pustaka, analisis aplikasi sejenis, dan diskusi kelompok.
+3. **Menuliskan kebutuhan:** kebutuhan fungsional FR-01 sampai FR-19, kebutuhan non-fungsional, dan aturan fitur.
+4. **Memvalidasi:** wireframe dan prototipe ditinjau sebelum fitur dibuat. Masukan dosen ditampung sebagai inkremen baru lewat branch fitur, bukan dengan mengubah rilis yang sudah berjalan.
+
+### 5.3 Kebutuhan dan aturan sistem
+
+Openspace baru berguna ketika aplikasi, orang (Owner, Koordinator, Member), dan cara kerja tim (rapat, pembagian tugas, tenggat) berjalan bersama. Contohnya, prasyarat tugas hanya membantu kalau tim memang mencatat urutan kerjanya. Karena itu kebutuhannya dibagi tiga:
+
+| Jenis                        | Contoh                                                                                                                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fungsi                       | Mengelola proyek, anggota, tugas, prasyarat, rapat, milestone, dan notifikasi                                                                                                         |
+| Sifat sistem                 | Password di-hash, token sekali pakai, status tidak dibedakan hanya dengan warna, empat tampilan membaca data yang sama                                                                |
+| Hal yang tidak boleh terjadi | Pengguna melihat proyek yang bukan miliknya. Member mengubah tugas orang lain. Prasyarat membentuk siklus. Satu action item menghasilkan dua tugas. Role yang masih dipakai terhapus. |
+
+Sifat seperti keamanan tidak dimiliki satu komponen saja. Keamanan Openspace muncul dari gabungan middleware akses, constraint unik di database (misalnya satu anggota hanya punya satu role per proyek), validasi input, dan antarmuka yang menonaktifkan aksi terlarang. Karena itu sifat ini diuji setelah semua bagian terhubung: pengujian API dengan empat role dijalankan terhadap aplikasi yang berjalan, bukan per fungsi.
+
+### 5.4 Arsitektur dan keputusan desain
+
+Kebutuhan dikelompokkan (akun, proyek dan anggota, role dan izin, tugas, kolaborasi, rapat, notifikasi), lalu dibagi ke empat sub-sistem dengan antarmuka yang jelas:
+
+| Sub-sistem      | Tanggung jawab                               | Antarmuka                                 |
+| --------------- | -------------------------------------------- | ----------------------------------------- |
+| Frontend React  | Penyajian dan interaksi                      | REST API dengan JSON ke backend           |
+| Backend Express | Autentikasi, pemeriksaan izin, aturan bisnis | Prisma ke database, SMTP ke layanan email |
+| PostgreSQL      | Data dan integritas relasi                   | Diakses lewat Prisma                      |
+| Layanan email   | Undangan dan reset password                  | SMTP                                      |
 
 ```mermaid
 flowchart LR
@@ -168,116 +195,114 @@ flowchart LR
   BE -->|SMTP| MAIL["Layanan email<br/>undangan, reset password"]
 ```
 
-**Evolusi sistem.** Skema database berubah lewat migrasi bertahap yang tercatat di [`backend/prisma/migrations`](backend/prisma/migrations) (init, lalu avatar pengguna, lalu ikon proyek). Lingkungan deploy juga berevolusi dari rencana Render ke Vercel tanpa mengubah perilaku aplikasi (lihat risiko T1 di [5.4](#54-project-management)). Untuk _decommissioning_, proyek bisa diarsipkan menjadi hanya-baca sebelum dihapus, dan penghapusan menghapus data turunan dengan urutan yang menjaga relasi.
+| Lapisan desain | Keputusan                                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Arsitektur     | Frontend, backend, database, dan email dipisah seperti diagram di atas                                                                                                                     |
+| Aturan bisnis  | Tugas terhambat tidak bisa dimulai, tugas Done tidak dibuka kembali bila tugas lanjutannya sudah berjalan, dan aturan lain ditulis sebagai fungsi murni                                    |
+| Antarmuka API  | Kontrak REST di [`backend/src/routes`](backend/src/routes)                                                                                                                                 |
+| Komponen       | Komponen React yang dipakai ulang di [`frontend/src/components/ui`](frontend/src/components/ui), misalnya `Modal`, `Menu`, dan [`ContextMenu`](frontend/src/components/ui/ContextMenu.jsx) |
+| Struktur data  | 19 model di [`schema.prisma`](backend/prisma/schema.prisma)                                                                                                                                |
+| Algoritma      | Deteksi siklus prasyarat dengan DFS ([`findCyclePath`](backend/src/lib/taskRules.js)); progres dihitung dari jumlah tugas Done dibagi seluruh tugas                                        |
 
-### 5.3 Software Processes
+Skema database berubah lewat migrasi bertahap di [`backend/prisma/migrations`](backend/prisma/migrations) (init, lalu avatar pengguna, lalu ikon proyek). Lingkungan deploy juga pernah berubah dari rencana Render ke Vercel tanpa mengubah perilaku aplikasi (risiko T1 di [5.8](#58-manajemen-proyek-dan-risiko)). Proyek yang tidak dipakai lagi bisa diarsipkan menjadi hanya-baca sebelum dihapus, dan penghapusan membersihkan data turunannya dengan urutan yang menjaga relasi.
 
-**Model proses: inkremental dengan prototyping.** Rancangan antarmuka dibuat lebih dulu sebagai prototipe Figma untuk menjelaskan kebutuhan. Setelah itu sistem dikirim per inkremen, sesuai slide _Incremental delivery_: kebutuhan prioritas tinggi dikerjakan lebih dulu, dan setiap inkremen menghasilkan perangkat lunak yang tetap bisa dijalankan.
+### 5.5 Kualitas yang dijaga
 
-| Inkremen           | Pull Request   | Isi                                                                                                                                     |
-| ------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Fondasi backend | #1 sampai #6   | Setup Express, skema Prisma dan migrasi, autentikasi JWT, pemeriksaan izin, endpoint proyek, anggota, role, tugas, milestone, dan rapat |
-| 2. Antarmuka       | #7 sampai #16  | Setup Vite, komponen UI, layout dan routing, halaman auth, empat tampilan tugas, Overview, Milestones, Meetings, Members, Roles         |
-| 3. Siap production | #17 sampai #22 | Pengamanan akun (pembatasan login, password untuk ganti email), deploy backend dan frontend di Vercel, rilis ke `main`                  |
-| 4. Penyempurnaan   | #23 sampai #25 | Dark mode, menu klik kanan, Timeline interaktif, tampilan ponsel, transisi, 43 uji unit                                                 |
+| Kualitas                | Penerapan                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mudah dipelihara        | Monorepo dengan batas yang jelas: [`backend/`](backend) dan [`frontend/`](frontend). Aturan bisnis ditulis sebagai fungsi murni di [`taskRules.js`](backend/src/lib/taskRules.js) dan [`taskGuards.js`](frontend/src/lib/taskGuards.js), sehingga bisa diuji tanpa browser atau database. ESLint dan Prettier menjaga gaya kode, dan [`CONTRIBUTING.md`](CONTRIBUTING.md) mengatur branch, format commit, dan kepemilikan file. |
+| Andal dan aman          | Password disimpan sebagai hash bcrypt. Token reset password dan undangan hanya disimpan hash SHA-256-nya, sekali pakai, dan punya masa berlaku ([`tokens.js`](backend/src/lib/tokens.js)). Semua input divalidasi Zod, dan perubahan yang saling terkait dibungkus transaksi Prisma.                                                                                                                                            |
+| Efisien                 | Empat tampilan tugas berbagi satu cache React Query, jadi data tugas tidak diambil ulang per tampilan. Backend berjalan di region Singapura (`sin1`), sedekat mungkin dengan database Neon.                                                                                                                                                                                                                                     |
+| Mudah diterima pengguna | Status selalu tampil sebagai ikon dan teks, bukan warna saja. Setiap penolakan menyebut alasannya, misalnya "Tugas ini masih menunggu: Persetujuan desain". Tersedia navigasi keyboard, tema gelap, dan tata letak ponsel.                                                                                                                                                                                                      |
 
-Setiap inkremen melewati Pull Request ke `develop`, lalu dirilis ke `main`. Pull Request dan riwayat commit-nya bisa ditelusuri di tab [Pull requests](https://github.com/agvswira/openspace/pulls?q=is%3Apr+is%3Amerged).
+Tiga hal lain ikut menentukan cara kerja tim:
 
-**Rekayasa kebutuhan.** Empat tahap di slide:
+- **Banyak lingkungan:** aplikasi yang sama berjalan di desktop, tablet, ponsel, tema terang dan gelap, serta di laptop (PostgreSQL bawaan lewat `embedded-postgres`) maupun di cloud (Vercel serverless dengan Neon).
+- **Pengiriman cepat:** setiap fitur dikirim lewat branch kecil dan Pull Request. Merge ke `main` langsung memicu deploy production di Vercel.
+- **Bisa dipercaya:** izin selalu diperiksa di backend; antarmuka hanya menonaktifkan tombol. Mematikan JavaScript atau memanggil API langsung tidak memberi akses tambahan.
 
-1. **Feasibility study:** cakupan dipilih sesuai kemampuan tim dan layanan gratis yang tersedia. Rapat dicatat manual, hasil kerja disimpan sebagai link (bukan unggahan berkas), dan tidak ada chat langsung antaranggota.
-2. **Elicitation and analysis:** studi pustaka, analisis aplikasi sejenis, dan diskusi kelompok.
-3. **Specification:** kebutuhan fungsional FR-01 sampai FR-19, kebutuhan non-fungsional, dan aturan fitur di Bab II laporan.
-4. **Validation:** prototipe Figma ditinjau sebelum fitur dibuat. Masukan dosen ditampung sebagai inkremen baru lewat branch fitur, bukan dengan mengubah rilis yang sudah berjalan.
+### 5.6 Pengujian
 
-**Aktivitas desain.** Enam aktivitas di slide dan artefaknya:
-
-| Aktivitas              | Artefak                                                                                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Architectural design   | Pembagian frontend, backend, database, dan email (diagram di [5.2](#52-socio-technical-systems))                                                                                           |
-| Abstract specification | Aturan fitur: tugas terhambat tidak bisa dimulai, tugas Done tidak dibuka kembali bila tugas lanjutannya sudah berjalan, dan sebagainya                                                    |
-| Interface design       | Kontrak REST API di [`backend/src/routes`](backend/src/routes)                                                                                                                             |
-| Component design       | Komponen React yang dipakai ulang di [`frontend/src/components/ui`](frontend/src/components/ui), misalnya `Modal`, `Menu`, dan [`ContextMenu`](frontend/src/components/ui/ContextMenu.jsx) |
-| Data structure design  | 19 model di [`schema.prisma`](backend/prisma/schema.prisma)                                                                                                                                |
-| Algorithm design       | Deteksi siklus prasyarat dengan DFS ([`findCyclePath`](backend/src/lib/taskRules.js)), progres dihitung dari jumlah tugas Done dibagi seluruh tugas                                        |
-
-**Verifikasi dan validasi.** Tahap pengujian di slide:
-
-| Tahap                    | Penerapan                                                                                                                                                                     | Status                                                                              |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Component (unit) testing | 43 uji unit dengan `node:test`: aturan tugas, katalog izin, serializer (termasuk memastikan `passwordHash` tidak bocor), dan logika seret Timeline. Jalankan `npm test`.      | 43 lulus                                                                            |
-| System testing           | Uji API terhadap aplikasi yang berjalan dengan empat role, 21 skenario black-box di browser, dan simulasi production (database kosong, `NODE_ENV=production`) sebelum deploy. | Lulus, rinciannya di [`docs/Penerapan-Materi-RPL.md`](docs/Penerapan-Materi-RPL.md) |
-| Acceptance testing       | User Acceptance Testing bersama calon pengguna.                                                                                                                               | Direncanakan                                                                        |
+| Tingkat             | Penerapan                                                                                                                                                                     | Status                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Unit                | 43 uji unit dengan `node:test`: aturan tugas, katalog izin, serializer (termasuk memastikan `passwordHash` tidak bocor), dan logika seret Timeline. Jalankan `npm test`.      | 43 lulus                                                                           |
+| Sistem              | Uji API terhadap aplikasi yang berjalan dengan empat role, 21 skenario black-box di browser, dan simulasi production (database kosong, `NODE_ENV=production`) sebelum deploy. | Lulus, rinciannya di [dokumen pengembangan lanjutan](docs/Penerapan-Materi-RPL.md) |
+| Penerimaan pengguna | User Acceptance Testing bersama calon pengguna.                                                                                                                               | Direncanakan                                                                       |
 
 Sebelum setiap Pull Request, `npm run lint`, `npm run format:check`, `npm test`, dan `npm run build` dijalankan.
 
-**Praktik baik RUP.**
+### 5.7 Alur kerja tim dan alat
 
-| Praktik                           | Penerapan                                                                                                                |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Develop software iteratively      | Empat inkremen di atas                                                                                                   |
-| Manage requirements               | Kebutuhan diberi kode (FR-01 dan seterusnya) dan dirujuk dari pengujian                                                  |
-| Use component-based architectures | Komponen UI yang dipakai ulang di frontend; route, middleware, dan lib yang terpisah di backend                          |
-| Visually model software           | Use case, class, sequence, activity diagram, dan ERD di Bab II laporan                                                   |
-| Verify software quality           | Uji unit, uji sistem, lint, dan build sebelum merge                                                                      |
-| Control changes to software       | Branch per fitur, Pull Request ke `develop`, rilis ke `main`, merge commit (bukan squash) agar riwayat tiap anggota utuh |
+| Praktik              | Penerapan                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Iteratif             | Empat inkremen di [5.2](#52-pengembangan-bertahap)                                                                       |
+| Kebutuhan tercatat   | Kebutuhan diberi kode (FR-01 dan seterusnya) dan dirujuk dari pengujian                                                  |
+| Berbasis komponen    | Komponen UI yang dipakai ulang di frontend; route, middleware, dan lib yang terpisah di backend                          |
+| Dimodelkan visual    | Wireframe dan prototipe di Figma; use case, class, sequence, activity diagram, dan ERD                                   |
+| Kualitas diperiksa   | Uji unit, uji sistem, lint, dan build sebelum merge                                                                      |
+| Perubahan terkendali | Branch per fitur, Pull Request ke `develop`, rilis ke `main`, merge commit (bukan squash) agar riwayat tiap anggota utuh |
 
-**Alat CASE.** Klasifikasi fungsional di slide dan alat yang dipakai tim:
+| Kegunaan                        | Alat                                                           |
+| ------------------------------- | -------------------------------------------------------------- |
+| Perencanaan                     | Openspace sendiri dan GitHub Pull Requests                     |
+| Desain dan prototipe            | Figma                                                          |
+| Penulisan kode                  | Visual Studio Code                                             |
+| Manajemen versi dan konfigurasi | Git, GitHub, Prisma Migrate                                    |
+| Skema dan data                  | Prisma, Prisma Studio                                          |
+| Build                           | Node.js, Vite                                                  |
+| Analisis kode                   | ESLint, Prettier                                               |
+| Pengujian                       | `node:test`                                                    |
+| Dokumentasi                     | Markdown (README, CONTRIBUTING, dokumen pengembangan lanjutan) |
 
-| Jenis alat                     | Alat                                                                |
-| ------------------------------ | ------------------------------------------------------------------- |
-| Planning tools                 | Openspace sendiri dan GitHub Pull Requests                          |
-| Editing tools                  | Visual Studio Code, Figma                                           |
-| Configuration management tools | Git, GitHub, Prisma Migrate                                         |
-| Prototyping tools              | Figma (wireframe dan prototipe interaktif)                          |
-| Method-support tools           | Prisma (skema data menjadi query client dan migrasi), Prisma Studio |
-| Language-processing tools      | Node.js, Vite (build frontend)                                      |
-| Program analysis tools         | ESLint                                                              |
-| Testing tools                  | `node:test`                                                         |
-| Documentation tools            | Markdown (README, CONTRIBUTING, dokumen penerapan materi)           |
+### 5.8 Manajemen proyek dan risiko
 
-### 5.4 Project Management
+Manajemen proyek muncul dua kali: sebagai **fitur** Openspace dan sebagai **cara tim mengelola** proyek Openspace sendiri.
 
-Materi ini diterapkan dua kali: sebagai **fitur** Openspace dan sebagai **cara tim mengelola** proyek Openspace sendiri.
+| Kebutuhan pengelola proyek          | Fitur Openspace                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| Titik pencapaian yang bisa dinilai  | Halaman Milestones dengan deadline, penanggung jawab, dan progres              |
+| Jadwal visual                       | Timeline: setiap tugas digambar sebagai bar dari tanggal mulai sampai deadline |
+| Urutan dan ketergantungan pekerjaan | Prasyarat tugas dengan garis putus-putus di Timeline dan penanda "terhambat"   |
+| Pembagian beban kerja               | Kartu _Workload by assignee_ di Overview                                       |
+| Pemantauan progres                  | Overview: progres, tugas terlambat, terhambat, dan perlu perhatian             |
+| Rapat kemajuan                      | Halaman Meetings dengan action item yang menjadi tugas                         |
+| Penempatan orang                    | Owner memilih anggota dan menetapkan role sesuai tanggung jawab                |
 
-**Konsep manajemen proyek sebagai fitur.**
+**Rencana proyek tim:**
 
-| Konsep di slide                                     | Fitur Openspace                                                                |
-| --------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Milestones: titik akhir aktivitas yang bisa dinilai | Halaman Milestones dengan deadline, penanggung jawab, dan progres              |
-| Bar charts                                          | Timeline: setiap tugas digambar sebagai bar dari tanggal mulai sampai deadline |
-| Activity networks, task dependencies                | Prasyarat tugas dengan garis putus-putus di Timeline dan penanda "terhambat"   |
-| Staff allocation                                    | Kartu _Workload by assignee_ di Overview                                       |
-| Project monitoring and reviews                      | Overview: progres, tugas terlambat, terhambat, dan perlu perhatian             |
-| Progress meetings                                   | Halaman Meetings dengan action item yang menjadi tugas                         |
-| Personnel selection                                 | Owner memilih anggota dan menetapkan role sesuai tanggung jawab                |
+| Bagian rencana           | Isi untuk Openspace                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Pendahuluan              | Latar belakang, rumusan masalah, dan tujuan                                                          |
+| Organisasi proyek        | Empat anggota dengan area kode masing-masing ([bagian 9](#9-tim))                                    |
+| Analisis risiko          | Tabel risiko di bawah                                                                                |
+| Sumber daya              | Layanan gratis: Vercel Hobby, Neon Free, Gmail SMTP                                                  |
+| Pembagian kerja          | Area kode per anggota di [`CONTRIBUTING.md`](CONTRIBUTING.md), dipecah lagi menjadi branch per fitur |
+| Jadwal                   | Urutan merge: backend, fondasi frontend, halaman, deploy, penyempurnaan                              |
+| Pemantauan dan pelaporan | Review Pull Request, status deploy di Vercel, dan rapat kelompok                                     |
 
-**Rencana proyek tim.** Struktur rencana proyek di slide dan isinya:
+**Risiko** dikelompokkan menurut sumbernya (teknologi, orang, organisasi, kebutuhan, estimasi), dinilai peluang dan dampaknya, lalu diberi strategi: dihindari, dikurangi dampaknya, atau disiapkan rencana cadangan. Sebagian risiko di bawah benar-benar terjadi selama pengerjaan.
 
-| Bagian rencana                  | Isi untuk Openspace                                                                                  |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Introduction                    | Latar belakang, rumusan masalah, dan tujuan di Bab I laporan                                         |
-| Project organisation            | Empat anggota dengan area kode masing-masing ([bagian 9](#9-tim))                                    |
-| Risk analysis                   | Tabel risiko di bawah                                                                                |
-| Hardware and software resources | Layanan gratis: Vercel Hobby, Neon Free, Gmail SMTP                                                  |
-| Work breakdown                  | Area kode per anggota di [`CONTRIBUTING.md`](CONTRIBUTING.md), dipecah lagi menjadi branch per fitur |
-| Project schedule                | Urutan merge: backend, fondasi frontend, halaman, deploy, penyempurnaan                              |
-| Monitoring and reporting        | Review Pull Request, status deploy di Vercel, dan rapat kelompok                                     |
+| ID  | Risiko                                                                | Sumber     | Peluang | Dampak           | Strategi                                                                              | Hasil                                                                     |
+| --- | --------------------------------------------------------------------- | ---------- | ------- | ---------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| T1  | Layanan hosting backend gratis ternyata meminta kartu pembayaran      | Teknologi  | Tinggi  | Serius           | Rencana cadangan: pindah ke Vercel Functions                                          | Terjadi. Kartu ditolak Render, backend dipindah ke Vercel (#19)           |
+| T2  | Layanan email tidak bisa mengirim ke alamat lain tanpa domain sendiri | Teknologi  | Tinggi  | Serius           | Rencana cadangan: Gmail SMTP dengan App Password                                      | Terjadi pada Resend, diganti Gmail SMTP                                   |
+| T3  | Database gratis tidur saat tidak dipakai, request pertama lambat      | Teknologi  | Tinggi  | Bisa ditoleransi | Dikurangi: backend dan database di region yang sama, buka aplikasi sebelum demo       | Diterima                                                                  |
+| T4  | Seed tidak sengaja dijalankan di production dan menghapus semua akun  | Organisasi | Rendah  | Fatal            | Dihindari: seed menolak `NODE_ENV=production` (#17)                                   | Dicegah                                                                   |
+| T5  | Akun dibobol dengan menebak password                                  | Teknologi  | Sedang  | Serius           | Dikurangi: batas 10 percobaan gagal per email per 15 menit (#17)                      | Dicegah                                                                   |
+| P1  | Anggota berhalangan saat bagiannya dibutuhkan                         | Orang      | Sedang  | Serius           | Rencana cadangan: kepemilikan file tercatat dan perubahan lintas area lewat review PR | Perubahan lintas area ditandai untuk direview pemiliknya, misalnya di #24 |
+| R1  | Kebutuhan berubah setelah masukan dosen                               | Kebutuhan  | Tinggi  | Bisa ditoleransi | Dikurangi: pengembangan inkremental, branch per fitur, preview deployment             | Berlangsung lewat inkremen berikutnya                                     |
+| E1  | Cakupan terlalu besar untuk satu semester                             | Estimasi   | Sedang  | Serius           | Dihindari: fitur prioritas dikerjakan lebih dulu, cakupan dibatasi sejak awal         | Fitur inti selesai                                                        |
 
-**Manajemen risiko.** Risiko diidentifikasi dengan lima kategori di slide, dianalisis peluang dan dampaknya, lalu diberi strategi _avoidance_, _minimisation_, atau _contingency_. Sebagian risiko di bawah benar-benar terjadi selama pengerjaan.
+Hal yang tidak terduga hampir selalu muncul (T1 dan T2), jadi rencana deploy perlu cadangan waktu.
 
-| ID  | Risiko                                                                | Jenis          | Peluang | Dampak       | Strategi                                                                           | Hasil                                                                     |
-| --- | --------------------------------------------------------------------- | -------------- | ------- | ------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| T1  | Layanan hosting backend gratis ternyata meminta kartu pembayaran      | Technology     | Tinggi  | Serius       | Contingency: pindah ke Vercel Functions                                            | Terjadi. Kartu ditolak Render, backend dipindah ke Vercel (#19)           |
-| T2  | Layanan email tidak bisa mengirim ke alamat lain tanpa domain sendiri | Technology     | Tinggi  | Serius       | Contingency: Gmail SMTP dengan App Password                                        | Terjadi pada Resend, diganti Gmail SMTP                                   |
-| T3  | Database gratis tidur saat tidak dipakai, request pertama lambat      | Technology     | Tinggi  | Tolerable    | Minimisation: backend dan database di region yang sama, buka aplikasi sebelum demo | Diterima                                                                  |
-| T4  | Seed tidak sengaja dijalankan di production dan menghapus semua akun  | Organisational | Rendah  | Catastrophic | Avoidance: seed menolak `NODE_ENV=production` (#17)                                | Dicegah                                                                   |
-| T5  | Akun dibobol dengan menebak password                                  | Technology     | Moderat | Serius       | Minimisation: batas 10 percobaan gagal per email per 15 menit (#17)                | Dicegah                                                                   |
-| P1  | Anggota berhalangan saat bagiannya dibutuhkan                         | People         | Moderat | Serius       | Contingency: kepemilikan file tercatat dan perubahan lintas area lewat review PR   | Perubahan lintas area ditandai untuk direview pemiliknya, misalnya di #24 |
-| R1  | Kebutuhan berubah setelah masukan dosen                               | Requirements   | Tinggi  | Tolerable    | Minimisation: pengembangan inkremental, branch per fitur, preview deployment       | Berlangsung lewat inkremen berikutnya                                     |
-| E1  | Cakupan terlalu besar untuk satu semester                             | Estimation     | Moderat | Serius       | Avoidance: fitur prioritas dikerjakan lebih dulu, cakupan dibatasi di Bab I        | Fitur inti selesai                                                        |
+### 5.9 Tanggung jawab terhadap data dan pengguna
 
-Slide _Scheduling problems_ juga terbukti: masalah yang tidak terduga selalu muncul (T1 dan T2), jadi rencana deploy perlu cadangan waktu.
+| Prinsip                            | Penerapan                                                                                                                                                                                                              |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kerahasiaan                        | Data proyek hanya bisa dibaca anggotanya. Secret tidak pernah masuk repository: hanya [`backend/.env.example`](backend/.env.example) tanpa nilai asli, dan nilai production disimpan di pengaturan environment Vercel. |
+| Kejujuran tentang kemampuan sistem | Keterbatasan sistem ditulis terbuka di [bagian 11](#11-keterbatasan). Angka di README, seperti jumlah uji unit dan aturan izin, dicocokkan dengan kode.                                                                |
+| Hak kekayaan intelektual           | Library, font, dan layanan dicantumkan beserta lisensinya di [bagian 10](#10-referensi-dan-kredit).                                                                                                                    |
+| Mencegah penyalahgunaan            | Percobaan login dibatasi per email ([`rateLimit.js`](backend/src/lib/rateLimit.js)), dan seed yang menghapus seluruh data menolak berjalan di production ([`seed.js`](backend/prisma/seed.js)).                        |
 
 ## 6. Arsitektur dan struktur repository
 
@@ -311,7 +336,7 @@ openspace/
 │   │   └── lib/          format, status, aturan seret Timeline
 │   ├── test/             uji unit frontend
 │   └── vercel.json       rewrite /api ke backend
-├── docs/                 penerapan materi RPL, PDF penjelasan, gambar README
+├── docs/                 dokumen pengembangan lanjutan, PDF penjelasan, gambar README
 └── Jalankan-Openspace.bat
 ```
 
@@ -400,7 +425,6 @@ Alur kerja tim, format commit, dan pembagian file ada di [`CONTRIBUTING.md`](CON
 
 ## 10. Referensi dan kredit
 
-- **Materi kuliah:** I. Sommerville, _Software Engineering_, 7th ed. Addison-Wesley, 2004, Bab 1, 2, 4, dan 5 ([folder materi](https://drive.google.com/drive/folders/1HN5IAR8tsiA-WGSGc8PtaxV2D2Hj8ErA)).
 - **Library:** React, React Router, TanStack Query, Axios, Vite, Express, Zod, jsonwebtoken, cors, dan embedded-postgres (MIT); Prisma (Apache-2.0); bcryptjs (BSD-3-Clause); dotenv (BSD-2-Clause); Nodemailer (MIT-0); Lucide icons (ISC).
 - **Font:** Geist dan Geist Mono dari Google Fonts (SIL Open Font License).
 - **Infrastruktur:** Vercel, Neon Postgres.
