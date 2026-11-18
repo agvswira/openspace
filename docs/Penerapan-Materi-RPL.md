@@ -8,16 +8,21 @@ Fitur ditambahkan dalam beberapa inkremen kecil. Setiap inkremen melewati siklus
 
 **Tabel 1.** Inkremen pengembangan
 
-| Inkremen | Isi                                                             | Commit                                                         |
-| :------: | :-------------------------------------------------------------- | :------------------------------------------------------------- |
-|    0     | _Baseline_ aplikasi sebelum penambahan fitur                    | `chore: snapshot awal sebelum penambahan fitur`                |
-|    1     | Dark mode (Light / Dark / System)                               | `feat(theme): dark mode dengan pilihan Light/Dark/System`      |
-|    2     | Menu klik kanan, sembunyikan, tambah cepat, aksi massal, Undo   | `feat(ux): menu klik kanan, sembunyikan, tambah cepat, ...`    |
-|    3     | Seret bar Timeline untuk jadwal dan tarik garis untuk prasyarat | `feat(timeline): seret bar untuk jadwal dan tarik garis ...`   |
-|    4     | Tampilan responsif ponsel dan tablet                            | `feat(mobile): tampilan responsif untuk ponsel dan tablet`     |
-|    5     | Pengujian unit otomatis dan dokumen ini                         | `test: pengujian unit aturan tugas, izin, dan logika timeline` |
+| Inkremen | Isi                                                                   | Commit                                                         |
+| :------: | :-------------------------------------------------------------------- | :------------------------------------------------------------- |
+|    0     | _Baseline_: branch `develop` setelah PR #1–#23                        | `Merge pull request #23 ...`                                   |
+|    1     | Dark mode (Light / Dark / System)                                     | `feat(theme): dark mode dengan pilihan Light/Dark/System`      |
+|    2     | Menu klik kanan, sembunyikan, tambah cepat, aksi massal, Undo         | `feat(ux): menu klik kanan, sembunyikan, tambah cepat, ...`    |
+|    3     | Seret bar Timeline untuk jadwal dan tarik garis untuk prasyarat       | `feat(timeline): seret bar untuk jadwal dan tarik garis ...`   |
+|    4     | Tampilan responsif ponsel dan tablet                                  | `feat(mobile): tampilan responsif untuk ponsel dan tablet`     |
+|    5     | Pengujian unit otomatis dan dokumen ini                               | `test: pengujian unit aturan tugas, izin, dan logika timeline` |
+|    6     | Launcher sekali klik untuk Windows                                    | `chore: launcher sekali klik Jalankan-Openspace.bat ...`       |
+|    7     | Timeline digeser dengan touchpad, rentang mengikuti tanggal tugas     | `feat(timeline): navigasi tanggal dengan geser touchpad ...`   |
+|    8     | Transisi dan animasi mikro, transisi antarhalaman (View Transitions)  | `feat(ui): transisi ...`                                       |
+|    9     | Perbaikan 15 temuan pengujian dan review kode (pemeliharaan korektif) | `fix: perbaikan 15 temuan dari pengujian dan review kode`      |
+|    10    | Dokumen PDF penjelasan project beserta tangkapan layar fitur          | `docs: PDF penjelasan project dan fitur Openspace ...`         |
 
-Riwayat inkremen bisa dilihat dengan `git log --oneline`. Pendekatan ini sejalan dengan prinsip Agile: perangkat lunak yang berjalan dikirim sedikit demi sedikit, dan setiap perubahan bisa ditelusuri atau dibatalkan.
+Seluruh inkremen di atas dikirim dalam satu branch `feature/fe-ux-improvements` dan satu Pull Request ke `develop`, dengan satu commit untuk setiap perubahan yang utuh (sesuai `CONTRIBUTING.md`). Riwayat inkremen bisa dilihat dengan `git log --oneline`. Pendekatan ini sejalan dengan prinsip Agile: perangkat lunak yang berjalan dikirim sedikit demi sedikit, dan setiap perubahan bisa ditelusuri atau dibatalkan.
 
 ## **2. Rekayasa Kebutuhan**
 
@@ -102,15 +107,15 @@ npm test
 
 **Tabel 5.** Rangkuman pengujian unit
 
-| Berkas uji                         | Unit yang diuji                                                                       | Teknik                                                                                                                            | Jumlah kasus |
-| :--------------------------------- | :------------------------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------- | :----------: |
-| `backend/test/taskRules.test.js`   | `isOverdue`, `startOfToday`, `waitingFor`, `isBlocked`, `progressOf`, `findCyclePath` | Nilai batas (deadline hari ini vs kemarin), partisi ekuivalen (Done/belum), jalur graf (linear, bercabang, siklus 2 dan 3 simpul) |      15      |
-| `backend/test/permissions.test.js` | Katalog izin, `createBuiltInRoles`                                                    | _Test double_ (transaksi palsu tanpa database)                                                                                    |      5       |
-| `backend/test/serialize.test.js`   | `publicUser`, `serializeTask`                                                         | Pemeriksaan keluaran, termasuk kebocoran `passwordHash`                                                                           |      7       |
-| `frontend/test/taskGuards.test.js` | `deleteBlocker`, `spanOf`, `shiftSpan`, `scheduleBody`                                | Nilai batas (seret melewati deadline/tanggal mulai), partisi mode seret                                                           |      11      |
-| **Total**                          |                                                                                       |                                                                                                                                   |    **38**    |
+| Berkas uji                         | Unit yang diuji                                                                               | Teknik                                                                                                                            | Jumlah kasus |
+| :--------------------------------- | :-------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------- | :----------: |
+| `backend/test/taskRules.test.js`   | `isOverdue`, `startOfToday`, `waitingFor`, `isBlocked`, `progressOf`, `findCyclePath`         | Nilai batas (deadline hari ini vs kemarin), partisi ekuivalen (Done/belum), jalur graf (linear, bercabang, siklus 2 dan 3 simpul) |      15      |
+| `backend/test/permissions.test.js` | Katalog izin, `createBuiltInRoles`                                                            | _Test double_ (transaksi palsu tanpa database)                                                                                    |      5       |
+| `backend/test/serialize.test.js`   | `publicUser`, `serializeTask`                                                                 | Pemeriksaan keluaran, termasuk kebocoran `passwordHash`                                                                           |      7       |
+| `frontend/test/taskGuards.test.js` | `deleteBlocker`, `spanOf`, `shiftSpan`, `scheduleBody`, `orderForStatus`, `bulkDeleteBlocker` | Nilai batas (seret melewati deadline/tanggal mulai), partisi mode seret, urutan topologis rantai prasyarat                        |      16      |
+| **Total**                          |                                                                                               |                                                                                                                                   |    **43**    |
 
-Hasil terakhir: **38 lulus, 0 gagal**.
+Hasil terakhir: **43 lulus, 0 gagal**.
 
 ### **5.2 Pengujian Black-Box**
 
@@ -151,7 +156,7 @@ Pengujian dijalankan di browser terhadap aplikasi yang berjalan (`npm run dev`) 
 | Korektif  | Menu akun di dasar sidebar sebelumnya terbuka ke bawah dan terpotong; sekarang dibalik ke atas otomatis.                          |
 | Adaptif   | Tampilan disesuaikan untuk ponsel dan tablet; tema mengikuti pengaturan gelap/terang sistem operasi.                              |
 | Perfektif | Menu klik kanan, tambah cepat, aksi massal, Undo, dan seret di Timeline mempercepat pekerjaan pengguna.                           |
-| Preventif | Logika dipisah ke modul murni dan diberi 38 uji unit sehingga perubahan berikutnya bisa langsung diuji ulang (_regression test_). |
+| Preventif | Logika dipisah ke modul murni dan diberi 43 uji unit sehingga perubahan berikutnya bisa langsung diuji ulang (_regression test_). |
 
 ## **7. Cara Mencoba**
 
