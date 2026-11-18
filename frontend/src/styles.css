@@ -2535,17 +2535,75 @@ svg circle {
   transition: stroke-dashoffset 0.5s var(--ease-in-out);
 }
 
-/* --- Pindah halaman & pindah tampilan (Board/List/Calendar/Timeline) --- */
+/* --- Pindah halaman & pindah tampilan (Board/List/Calendar/Timeline) ---
+   Utama: View Transitions API (lihat main.jsx). Hanya area konten yang beranimasi: halaman
+   lama memudar cepat, halaman baru masuk dengan fade + naik sedikit. Sidebar & topbar diam,
+   sedangkan penanda menu/tab aktif "meluncur" ke posisi barunya.
+   Cadangan (browser tanpa View Transitions): fade-in saja. Sengaja tanpa transform agar
+   elemen position:fixed di dalam halaman (bilah aksi massal, tombol +) tidak bergeser. */
 .page,
 .page-wide,
 .view-swap {
-  animation: page-in 0.22s var(--ease);
+  animation: page-in 0.2s var(--ease);
 }
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
+}
+@supports (view-transition-name: none) {
+  .page,
+  .page-wide,
+  .view-swap {
+    animation: none;
+  }
+  .content {
+    view-transition-name: content;
+  }
+  .sidebar .nav-item.active {
+    view-transition-name: nav-active;
+  }
+  .tabs .tab.active {
+    view-transition-name: tab-active;
+  }
+  .mobile-tabs .mobile-tab.active {
+    view-transition-name: mobile-tab-active;
+  }
+  .bottom-nav .bnav-item.active {
+    view-transition-name: bnav-active;
+  }
+}
+/* Seluruh halaman (root) tidak di-crossfade: hanya bagian bernama di atas yang bergerak. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-old(content) {
+  animation: vt-out 0.14s var(--ease-in-out) both;
+}
+::view-transition-new(content) {
+  animation: vt-in 0.28s var(--ease) both;
+}
+::view-transition-group(content) {
+  animation-duration: 0.28s;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+::view-transition-group(nav-active),
+::view-transition-group(tab-active),
+::view-transition-group(mobile-tab-active),
+::view-transition-group(bnav-active) {
+  animation-duration: 0.28s;
+  animation-timing-function: var(--ease);
 }
 .view-swap {
   flex: 1;
@@ -2617,6 +2675,11 @@ html.theme-anim *::after {
 
 /* --- Aksesibilitas: hormati pengaturan "kurangi animasi" --- */
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
   *,
   *::before,
   *::after {
