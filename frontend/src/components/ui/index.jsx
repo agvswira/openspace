@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Inbox,
@@ -188,28 +189,74 @@ export function ErrorState({ error, onRetry }) {
   );
 }
 
-// Menu sederhana yang tertutup saat klik di luar.
+// Menu dropdown yang tertutup saat klik di luar atau Esc. Popover dirender lewat portal
+// dengan posisi fixed, lalu dibalik ke atas bila ruang di bawah tidak cukup (mis. menu akun
+// di dasar sidebar) dan digeser agar tidak keluar layar.
 export function Menu({ trigger, children, align = 'right', width }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const popRef = useRef(null);
+  const [pos, setPos] = useState(null);
+
   useEffect(() => {
-    if (!open) return;
-    const close = (e) => !ref.current?.contains(e.target) && setOpen(false);
+    if (!open) return undefined;
+    const close = (e) => !ref.current?.contains(e.target) && !popRef.current?.contains(e.target) && setOpen(false);
+    const onKey = (e) => e.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return setPos(null);
+    const place = () => {
+      const r = ref.current?.getBoundingClientRect();
+      const pop = popRef.current;
+      if (!r || !pop) return;
+      const w = width === '100%' ? r.width : pop.offsetWidth;
+      const h = pop.offsetHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let left = align === 'left' ? r.left : r.right - w;
+      left = Math.min(Math.max(8, left), vw - w - 8);
+      let top = r.bottom + 4;
+      if (top + h > vh - 8 && r.top - h - 4 >= 8) top = r.top - h - 4;
+      setPos({ left, top: Math.max(8, Math.min(top, vh - h - 8)), width: width === '100%' ? r.width : width });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, align, width]);
+
   return (
     <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
       {trigger({ open, toggle: () => setOpen((o) => !o) })}
-      {open && (
-        <div
-          className="popover"
-          style={{ top: '100%', marginTop: 4, [align]: 0, width }}
-          onClick={(e) => e.target.closest('.menu-item') && setOpen(false)}
-        >
-          {children}
-        </div>
-      )}
+      {open &&
+        createPortal(
+          <div
+            ref={popRef}
+            className="popover"
+            role="menu"
+            style={{
+              position: 'fixed',
+              left: pos?.left ?? -9999,
+              top: pos?.top ?? 0,
+              width: pos?.width ?? (width === '100%' ? undefined : width),
+              visibility: pos ? 'visible' : 'hidden',
+            }}
+            onClick={(e) => e.target.closest('.menu-item') && setOpen(false)}
+          >
+            {children}
+          </div>,
+          document.body,
+        )}
     </span>
   );
 }

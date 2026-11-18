@@ -139,7 +139,7 @@ export default function Home() {
               minHeight: 170,
             }}
           >
-            <span className="empty-icon" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+            <span className="empty-icon" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border)' }}>
               <Plus size={18} />
             </span>
             <strong className="sm">New project</strong>

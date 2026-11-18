@@ -56,7 +56,7 @@ function Onboarding({ project, onInvite, onTask, onClose }) {
   return (
     <div
       className="card card-pad"
-      style={{ marginBottom: 16, background: 'var(--primary-soft)', borderColor: '#bfdbfe' }}
+      style={{ marginBottom: 16, background: 'var(--primary-soft)', borderColor: 'var(--primary-border)' }}
     >
       <div className="row-between">
         <strong>Get started with {project.name}</strong>

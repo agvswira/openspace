@@ -10,11 +10,11 @@ const HEAD_ROW = 34; // baris milestone di atas daftar tugas
 const SPAN = 14;
 
 const COLORS = {
-  TODO: { bg: '#eff6ff', border: '#bfdbfe' },
-  IN_PROGRESS: { bg: '#fff7ed', border: '#fed7aa' },
-  DONE: { bg: '#f0fdf4', border: '#bbf7d0' },
-  OVERDUE: { bg: '#fef2f2', border: '#fecaca' },
-  BLOCKED: { bg: '#fffbeb', border: '#fde68a' },
+  TODO: { bg: 'var(--todo-bg)', border: 'var(--todo-border)' },
+  IN_PROGRESS: { bg: 'var(--progress-bg)', border: 'var(--progress-border)' },
+  DONE: { bg: 'var(--done-bg)', border: 'var(--done-border)' },
+  OVERDUE: { bg: 'var(--overdue-bg)', border: 'var(--overdue-border)' },
+  BLOCKED: { bg: 'var(--blocked-bg)', border: 'var(--blocked-border)' },
 };
 
 // "8 – 21 October 2026" bila satu bulan, "29 Oct – 11 Nov 2026" bila lintas bulan (format Figma).
@@ -141,7 +141,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen }) {
                 width: DAY_W,
                 borderLeft: '1px solid var(--border)',
                 background: sameDay(d, today)
-                  ? 'rgba(37,99,235,0.06)'
+                  ? 'var(--tl-today)'
                   : [0, 6].includes(d.getDay())
                     ? 'var(--bg-subtle)'
                     : undefined,
@@ -209,7 +209,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen }) {
                   key={l.key}
                   d={d}
                   fill="none"
-                  stroke={l.done ? 'var(--text-faint)' : '#d97706'}
+                  stroke={l.done ? 'var(--text-faint)' : 'var(--dep-line)'}
                   strokeWidth="1.5"
                   strokeDasharray="4 3"
                   markerEnd="url(#arrow)"
@@ -218,7 +218,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen }) {
             })}
             <defs>
               <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-                <path d="M0 0 L8 4 L0 8 z" fill="#d97706" />
+                <path d="M0 0 L8 4 L0 8 z" fill="var(--dep-line)" />
               </marker>
             </defs>
           </svg>

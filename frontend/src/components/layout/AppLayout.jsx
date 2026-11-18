@@ -27,6 +27,7 @@ import SearchDialog from './SearchDialog';
 import NotificationsMenu from './NotificationsMenu';
 import NewProjectModal from './NewProjectModal';
 import InviteModal from '../InviteModal';
+import { ThemeSwitcher, ThemeToggleButton } from '../ThemeSwitcher';
 
 const PROJECT_NAV = [
   { to: 'overview', label: 'Overview', Icon: LayoutGrid },
@@ -133,7 +134,7 @@ function Sidebar({ onSearch, onNewProject }) {
         </NavLink>
         <Menu
           align="left"
-          width={220}
+          width={256}
           trigger={({ toggle }) => (
             <button className="account" onClick={toggle}>
               <Avatar user={user} size={30} />
@@ -153,6 +154,10 @@ function Sidebar({ onSearch, onNewProject }) {
             <Settings size={14} />
             Profile & preferences
           </Link>
+          <div className="menu-label">Theme</div>
+          <div style={{ padding: '0 6px 6px' }}>
+            <ThemeSwitcher />
+          </div>
           <button
             className="menu-item danger"
             onClick={() => {
@@ -231,6 +236,7 @@ function Topbar({ onInvite }) {
             <Share2 size={16} />
           </button>
         )}
+        <ThemeToggleButton />
         <NotificationsMenu
           trigger={({ toggle, unread }) => (
             <button

@@ -14,6 +14,7 @@ import {
   Switch,
 } from '../components/ui';
 import { toAvatarDataUrl } from '../lib/image';
+import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { PROJECT_COLORS } from '../components/layout/NewProjectModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -101,7 +102,7 @@ function ProjectSettingsForm({ p }) {
       {!isOwner && (
         <div
           className="form-error"
-          style={{ marginBottom: 16, background: 'var(--blocked-bg)', color: 'var(--blocked)', borderColor: '#fde68a' }}
+          style={{ marginBottom: 16, background: 'var(--blocked-bg)', color: 'var(--blocked)', borderColor: 'var(--blocked-border)' }}
         >
           <Lock size={15} />
           Hanya Owner yang dapat mengubah pengaturan proyek. Anda melihat dalam mode baca.
@@ -491,6 +492,26 @@ export function WorkspaceSettings() {
           </div>
         </div>
       </form>
+
+      <section className="settings-section">
+        <div>
+          <h3 className="card-title">Appearance</h3>
+          <p className="sm muted" style={{ marginTop: 4 }}>
+            Light, dark, or follow your system setting.
+          </p>
+        </div>
+        <div className="card">
+          <div className="perm-row">
+            <div>
+              <div className="sm" style={{ fontWeight: 500 }}>
+                Theme
+              </div>
+              <div className="xs muted">Saved on this device.</div>
+            </div>
+            <ThemeSwitcher />
+          </div>
+        </div>
+      </section>
 
       <section className="settings-section">
         <div>

@@ -342,7 +342,7 @@ export default function Members() {
                 style={{
                   width: 30,
                   height: 30,
-                  background: '#fff',
+                  background: 'var(--bg-panel)',
                   color: 'var(--text-muted)',
                   border: '1px solid var(--border)',
                 }}
