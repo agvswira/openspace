@@ -159,8 +159,12 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
                     type="checkbox"
                     aria-label="Pilih semua tugas"
                     checked={tasks.length > 0 && selectedTasks.length === tasks.length}
-                    ref={(el) => el && (el.indeterminate = selectedTasks.length > 0 && selectedTasks.length < tasks.length)}
-                    onChange={() => (selectedTasks.length === tasks.length ? clear() : setSelected(tasks.map((t) => t.id)))}
+                    ref={(el) =>
+                      el && (el.indeterminate = selectedTasks.length > 0 && selectedTasks.length < tasks.length)
+                    }
+                    onChange={() =>
+                      selectedTasks.length === tasks.length ? clear() : setSelected(tasks.map((t) => t.id))
+                    }
                   />
                 </th>
                 <th style={{ width: '34%' }}>Task</th>
@@ -289,9 +293,7 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
                             </span>
                           </td>
                         )}
-                        <td>
-                          {menuFor && <MoreButton label={`Menu ${t.title}`} getItems={() => menuFor(t)} />}
-                        </td>
+                        <td>{menuFor && <MoreButton label={`Menu ${t.title}`} getItems={() => menuFor(t)} />}</td>
                       </tr>
                     ))}
                   {!closed && !items.length && (
@@ -332,11 +334,7 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
             )}
           >
             {STATUS_ORDER.map((s) => (
-              <button
-                key={s}
-                className="menu-item"
-                onClick={() => bulk.setStatusMany(selectedTasks, s).then(clear)}
-              >
+              <button key={s} className="menu-item" onClick={() => bulk.setStatusMany(selectedTasks, s).then(clear)}>
                 <StatusIcon status={s} />
                 {STATUS[s].label}
               </button>

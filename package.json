@@ -11,7 +11,8 @@
     "lint": "eslint backend frontend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:studio": "npm run db:studio --prefix backend"
+    "db:studio": "npm run db:studio --prefix backend",
+    "test": "npm test --prefix backend && npm test --prefix frontend"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -4,6 +4,7 @@ import { AvatarStack } from '../ui';
 import { useContextMenu, useMenuBinder } from '../ui/ContextMenu';
 import { STATUS, StatusIcon, displayState } from '../../lib/status';
 import { MONTHS, addDays, diffDays, fmtDow, fmtShort, monthName, sameDay, startOfDay } from '../../lib/format';
+import { scheduleBody, shiftSpan, spanOf } from '../../lib/taskGuards';
 
 const MIN_DAY_W = 56;
 const ROW_H = 36;
@@ -24,9 +25,6 @@ function rangeLabel(a, b) {
   if (a.getMonth() === b.getMonth()) return `${a.getDate()} – ${b.getDate()} ${monthName(b)} ${b.getFullYear()}`;
   return `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
 }
-
-// Tanggal mulai/akhir efektif sebuah tugas; tugas tanpa salah satunya dianggap satu hari.
-const spanOf = (t) => ({ s: startOfDay(t.startDate || t.dueDate), e: startOfDay(t.dueDate || t.startDate) });
 
 /**
  * Timeline: setiap tugas digambar sebagai bar dari tanggal mulai sampai deadline, hubungan
@@ -86,10 +84,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     if (pendingDates[t.id]) return pendingDates[t.id];
     const sp = spanOf(t);
     if (!drag || drag.task.id !== t.id || !deltaDays) return sp;
-    if (drag.mode === 'move') return { s: addDays(sp.s, deltaDays), e: addDays(sp.e, deltaDays) };
-    if (drag.mode === 'start') return { s: addDays(sp.s, Math.min(deltaDays, diffDays(sp.e, sp.s))), e: sp.e };
-    if (drag.mode === 'end') return { s: sp.s, e: addDays(sp.e, Math.max(deltaDays, -diffDays(sp.e, sp.s))) };
-    return sp;
+    return shiftSpan(sp, drag.mode, deltaDays);
   };
 
   // Hanya tugas yang beririsan dengan rentang 14 hari yang digambar; bar dipotong di tepi rentang.
@@ -182,14 +177,8 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
       }
       const n = Math.round(d.dx / DAY_W);
       if (!n) return;
-      const sp = spanOf(d.task);
-      let next = sp;
-      if (d.mode === 'move') next = { s: addDays(sp.s, n), e: addDays(sp.e, n) };
-      if (d.mode === 'start') next = { s: addDays(sp.s, Math.min(n, diffDays(sp.e, sp.s))), e: sp.e };
-      if (d.mode === 'end') next = { s: sp.s, e: addDays(sp.e, Math.max(n, -diffDays(sp.e, sp.s))) };
-      const body = {};
-      if (d.task.startDate || d.mode === 'start') body.startDate = next.s.toISOString();
-      if (d.task.dueDate || d.mode === 'end') body.dueDate = next.e.toISOString();
+      const next = shiftSpan(spanOf(d.task), d.mode, n);
+      const body = scheduleBody(d.task, d.mode, next);
       setPendingDates((p) => ({ ...p, [d.task.id]: next }));
       bulk.setDates(d.task, body).finally(() =>
         setPendingDates((p) => {
@@ -382,7 +371,15 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
               <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
                 <path d="M0 0 L8 4 L0 8 z" fill="var(--dep-line)" />
               </marker>
-              <marker id="arrow-done" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <marker
+                id="arrow-done"
+                viewBox="0 0 8 8"
+                refX="7"
+                refY="4"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto"
+              >
                 <path d="M0 0 L8 4 L0 8 z" fill="var(--text-faint)" />
               </marker>
               <marker id="arrow-new" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">

@@ -26,7 +26,11 @@ export default function TaskRow({ task, showMilestone = false, showMenu = false 
   const bind = useMenuBinder();
   const menu = bind(() => [
     { label: 'Open task', icon: ExternalLink, onSelect: open },
-    { label: done ? 'Mark as not done' : 'Mark as done', icon: done ? RotateCcw : CircleCheck, onSelect: () => setDone(!done) },
+    {
+      label: done ? 'Mark as not done' : 'Mark as done',
+      icon: done ? RotateCcw : CircleCheck,
+      onSelect: () => setDone(!done),
+    },
     {
       label: 'Copy link',
       icon: Link2,

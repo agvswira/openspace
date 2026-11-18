@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ExternalLink,
-  Pencil,
-  CircleDot,
-  Flag,
-  UserPlus,
-  UserMinus,
-  Copy,
-  Link2,
-  EyeOff,
-  Trash2,
-} from 'lucide-react';
+import { ExternalLink, Pencil, CircleDot, Flag, UserPlus, UserMinus, Copy, Link2, EyeOff, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, errorMessage, tokenStore } from '../../api/client';
 import { projectTaskKeys } from '../../api/hooks';
@@ -20,6 +9,7 @@ import { ConfirmDialog } from '../ui';
 import { PRIORITY, STATUS, STATUS_ORDER } from '../../lib/status';
 import { useCan } from './TaskDetailPanel';
 import TaskFormModal from './TaskFormModal';
+import { deleteBlocker } from '../../lib/taskGuards';
 
 const UNDO_MS = 6000;
 
@@ -47,15 +37,6 @@ function useStoredState(key, initial) {
     [key],
   );
   return [value, set];
-}
-
-// Alasan sebuah tugas tidak boleh dihapus (aturan yang sama dengan backend, dicek lebih awal).
-export function deleteBlocker(task) {
-  if (task.dependents?.length)
-    return `Tugas ini menjadi prasyarat bagi: ${task.dependents.map((d) => d.title).join(', ')}. Hapus hubungan prasyarat terlebih dahulu.`;
-  if (task.fromMeeting)
-    return `Tugas ini berasal dari action item rapat "${task.fromMeeting.title}" dan tidak dapat dihapus langsung.`;
-  return null;
 }
 
 /**
@@ -238,7 +219,11 @@ export function useTaskActions(projectId, { onOpen } = {}) {
             disabled: !canEditAll,
             hint: noEdit,
             onSelect: () =>
-              patch(task, { assigneeIds: task.assignees.filter((a) => a.id !== user.id).map((a) => a.id) }, 'Anda dilepas dari tugas'),
+              patch(
+                task,
+                { assigneeIds: task.assignees.filter((a) => a.id !== user.id).map((a) => a.id) },
+                'Anda dilepas dari tugas',
+              ),
           }
         : {
             label: 'Assign to me',

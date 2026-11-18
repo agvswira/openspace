@@ -98,9 +98,7 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
         // Klik kanan di area kosong kolom: buat tugas baru di kolom ini.
         const colMenu = bind(
           canCreate &&
-            (() => [
-              { label: `New task in ${STATUS[status].label}…`, icon: Plus, onSelect: () => onCreate(status) },
-            ]),
+            (() => [{ label: `New task in ${STATUS[status].label}…`, icon: Plus, onSelect: () => onCreate(status) }]),
         );
         return (
           <section key={status} aria-label={STATUS[status].label}>

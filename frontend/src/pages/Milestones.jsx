@@ -47,14 +47,28 @@ export function MilestoneCard({ m, projectId, canManage, onEdit, onDelete, full 
       icon: ExternalLink,
       onSelect: () => navigate(`/projects/${projectId}/milestones/${m.id}`),
     },
-    { label: 'Edit milestone…', icon: Pencil, disabled: !canManage, hint: 'Role Anda tidak memiliki izin Manage milestones.', onSelect: () => onEdit(m) },
+    {
+      label: 'Edit milestone…',
+      icon: Pencil,
+      disabled: !canManage,
+      hint: 'Role Anda tidak memiliki izin Manage milestones.',
+      onSelect: () => onEdit(m),
+    },
     {
       label: 'Copy link',
       icon: Link2,
-      onSelect: () => navigator.clipboard?.writeText(`${window.location.origin}/projects/${projectId}/milestones/${m.id}`),
+      onSelect: () =>
+        navigator.clipboard?.writeText(`${window.location.origin}/projects/${projectId}/milestones/${m.id}`),
     },
     { separator: true },
-    { label: 'Delete milestone', icon: Trash2, danger: true, disabled: !canManage, hint: 'Role Anda tidak memiliki izin Manage milestones.', onSelect: () => onDelete(m) },
+    {
+      label: 'Delete milestone',
+      icon: Trash2,
+      danger: true,
+      disabled: !canManage,
+      hint: 'Role Anda tidak memiliki izin Manage milestones.',
+      onSelect: () => onDelete(m),
+    },
   ]);
   // Label mengikuti fase milestone (Figma); risiko ditunjukkan terpisah pada kolom At risk.
   const st = phase(m) === 'completed' ? 'DONE' : phase(m) === 'active' ? 'IN_PROGRESS' : 'TODO';

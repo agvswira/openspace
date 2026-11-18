@@ -229,7 +229,9 @@ export default function Members() {
                         label: 'Make owner',
                         icon: Shield,
                         disabled: !isOwner || m.role.isOwner,
-                        hint: m.role.isOwner ? 'Sudah menjadi Owner.' : 'Hanya Owner yang dapat mengalihkan kepemilikan.',
+                        hint: m.role.isOwner
+                          ? 'Sudah menjadi Owner.'
+                          : 'Hanya Owner yang dapat mengalihkan kepemilikan.',
                         onSelect: () => setTransfer(m),
                       },
                       { separator: true },
@@ -238,7 +240,9 @@ export default function Members() {
                         icon: UserMinus,
                         danger: true,
                         disabled: !isOwner || m.role.isOwner,
-                        hint: m.role.isOwner ? 'Owner tidak dapat dikeluarkan.' : 'Hanya Owner yang dapat mengeluarkan anggota.',
+                        hint: m.role.isOwner
+                          ? 'Owner tidak dapat dikeluarkan.'
+                          : 'Hanya Owner yang dapat mengeluarkan anggota.',
                         onSelect: () => setRemoving(m),
                       },
                     ])}

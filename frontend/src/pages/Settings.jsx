@@ -102,7 +102,12 @@ function ProjectSettingsForm({ p }) {
       {!isOwner && (
         <div
           className="form-error"
-          style={{ marginBottom: 16, background: 'var(--blocked-bg)', color: 'var(--blocked)', borderColor: 'var(--blocked-border)' }}
+          style={{
+            marginBottom: 16,
+            background: 'var(--blocked-bg)',
+            color: 'var(--blocked)',
+            borderColor: 'var(--blocked-border)',
+          }}
         >
           <Lock size={15} />
           Hanya Owner yang dapat mengubah pengaturan proyek. Anda melihat dalam mode baca.
