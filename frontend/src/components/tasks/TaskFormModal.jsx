@@ -187,7 +187,7 @@ export default function TaskFormModal({ projectId: fixedProjectId, task, default
                     borderRadius: 4,
                     display: 'grid',
                     placeItems: 'center',
-                    background: form.assigneeIds.includes(m.user.id) ? 'var(--primary)' : '#fff',
+                    background: form.assigneeIds.includes(m.user.id) ? 'var(--primary)' : 'var(--bg-panel)',
                   }}
                 >
                   {form.assigneeIds.includes(m.user.id) && <Check size={12} color="#fff" />}

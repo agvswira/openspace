@@ -4,12 +4,12 @@ Repo ini monorepo: `backend/` (Express + Prisma) dan `frontend/` (React + Vite) 
 
 ## Pembagian tugas
 
-| Anggota | Peran                     | Area kode                                                                                                                                                                            |
-| ------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Orang 1 | Backend dan ketua repo    | `backend/` (prisma, middleware, lib, routes, scripts) dan file konfigurasi di root                                                                                                   |
+| Anggota | Peran                     | Area kode                                                                                                                                                                           |
+| ------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Orang 1 | Backend dan ketua repo    | `backend/` (prisma, middleware, lib, routes, scripts) dan file konfigurasi di root                                                                                                  |
 | Orang 2 | Frontend core dan auth    | `frontend/package.json`, `main.jsx`, `App.jsx`, `styles.css`, `api/`, `context/`, `lib/`, `components/ui/`, `components/layout/`, `pages/AuthPages.jsx`, `Home.jsx`, `Settings.jsx` |
-| Orang 3 | Frontend tugas            | `pages/Tasks.jsx`, `pages/MyTasks.jsx`, `components/tasks/`                                                                                                                          |
-| Orang 4 | Frontend manajemen proyek | `pages/Overview.jsx`, `Milestones.jsx`, `Meetings.jsx`, `Members.jsx`, `Roles.jsx`, `components/InviteModal.jsx`                                                                     |
+| Orang 3 | Frontend tugas            | `pages/Tasks.jsx`, `pages/MyTasks.jsx`, `components/tasks/`                                                                                                                         |
+| Orang 4 | Frontend manajemen proyek | `pages/Overview.jsx`, `Milestones.jsx`, `Meetings.jsx`, `Members.jsx`, `Roles.jsx`, `components/InviteModal.jsx`                                                                    |
 
 Kalau perlu mengubah file milik anggota lain, kabari pemiliknya dulu dan minta dia me-review PR-nya.
 
@@ -61,14 +61,14 @@ npm run format:check
 
 Format: `tipe(area): deskripsi singkat`
 
-| Tipe       | Dipakai untuk                         |
-| ---------- | ------------------------------------- |
-| `feat`     | fitur baru                            |
-| `fix`      | perbaikan bug                         |
-| `refactor` | ubah struktur tanpa ubah perilaku     |
-| `style`    | tampilan/CSS atau format kode         |
-| `docs`     | dokumentasi                           |
-| `chore`    | konfigurasi, dependensi               |
+| Tipe       | Dipakai untuk                     |
+| ---------- | --------------------------------- |
+| `feat`     | fitur baru                        |
+| `fix`      | perbaikan bug                     |
+| `refactor` | ubah struktur tanpa ubah perilaku |
+| `style`    | tampilan/CSS atau format kode     |
+| `docs`     | dokumentasi                       |
+| `chore`    | konfigurasi, dependensi           |
 
 Contoh: `feat(tasks): tambah tampilan kalender`, `fix(auth): token reset kedaluwarsa tidak ditolak`.
 
