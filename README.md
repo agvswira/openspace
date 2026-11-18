@@ -8,6 +8,12 @@ Sistem Manajemen Proyek dan Alur Kerja Terintegrasi. Capstone Project Rekayasa P
 | Backend    | Node.js, Express 5, JSON Web Token, bcryptjs, Zod, Nodemailer                                              |
 | Basis data | PostgreSQL (Prisma ORM 6). Untuk pengembangan, PostgreSQL 18 dijalankan otomatis lewat `embedded-postgres` |
 
+## Cara cepat (Windows)
+
+Klik dua kali **`Jalankan-Openspace.bat`**. Pertama kali dijalankan, file ini menginstal dependensi (butuh internet, beberapa menit). Setelah itu aplikasi langsung jalan dan browser terbuka di http://localhost:5180. Tutup jendela hitamnya untuk menghentikan aplikasi.
+
+Syarat: [Node.js](https://nodejs.org) versi 20 atau lebih baru.
+
 ## Menjalankan (Windows/macOS/Linux)
 
 Prasyarat: **Node.js 20 atau lebih baru**. PostgreSQL **tidak perlu** diinstal.
