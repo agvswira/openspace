@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Flag, FileText } from 'lucide-react';
-import { api } from '../../api/client';
+import { Search, Flag, FileText, X } from 'lucide-react';
+import { api, errorMessage } from '../../api/client';
 import { StatusIcon, displayState } from '../../lib/status';
-import { ProjectMark } from '../ui';
+import { FormError, ProjectMark } from '../ui';
 
 // FR-16: pencarian tugas, milestone, dan halaman (Ctrl+K).
 export default function SearchDialog({ onClose }) {
   const [q, setQ] = useState('');
   // Hasil disimpan bersama kata kuncinya; respons lama yang datang terlambat otomatis diabaikan.
-  const [found, setFound] = useState({ q: '', data: null });
+  const [found, setFound] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,10 +20,22 @@ export default function SearchDialog({ onClose }) {
 
   useEffect(() => {
     if (q.trim().length < 2) return undefined;
-    const id = setTimeout(() => api.get('/search', { params: { q } }).then((r) => setFound({ q, data: r.data })), 200);
-    return () => clearTimeout(id);
+    const request = new AbortController();
+    const id = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/search', { params: { q }, signal: request.signal });
+        if (!request.signal.aborted) setFound({ q, data });
+      } catch (error) {
+        if (!request.signal.aborted) setFound({ q, error });
+      }
+    }, 200);
+    return () => {
+      clearTimeout(id);
+      request.abort();
+    };
   }, [q]);
-  const res = q.trim().length >= 2 && found.q === q ? found.data : null;
+  const result = q.trim().length >= 2 && found?.q === q ? found : null;
+  const res = result?.data;
 
   const go = (to) => {
     navigate(to);
@@ -43,18 +55,27 @@ export default function SearchDialog({ onClose }) {
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="modal" role="dialog" aria-label="Pencarian">
-        <div className="input-icon" style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
-          <Search size={16} style={{ left: 24 }} />
-          <input
-            autoFocus
-            className="input"
-            style={{ border: 'none', boxShadow: 'none' }}
-            placeholder="Search tasks, milestones and pages…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+        <div className="search-dialog-bar">
+          <div className="input-icon grow">
+            <Search size={16} />
+            <input
+              autoFocus
+              className="input"
+              placeholder="Search tasks, milestones and pages…"
+              aria-label="Cari tugas, milestone, dan halaman"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setFound(null);
+              }}
+            />
+          </div>
+          <button type="button" className="icon-btn" aria-label="Tutup pencarian" onClick={onClose}>
+            <X size={18} />
+          </button>
         </div>
         <div style={{ padding: 6, maxHeight: 420, overflow: 'auto' }}>
+          {result?.error && <FormError message={errorMessage(result.error)} />}
           {!q && (
             <p className="sm muted" style={{ padding: 14 }}>
               Ketik minimal 2 huruf untuk mencari.

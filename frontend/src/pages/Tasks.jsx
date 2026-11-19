@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useSearchParams, useOutletContext } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams, useOutletContext } from 'react-router-dom';
 import { Kanban, List, Calendar, GanttChart, Search, SlidersHorizontal, Plus, UserPlus, X, Eye } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import { projectTaskKeys, useApiMutation, useMeetings, useMilestones, useProject, useTasks } from '../api/hooks';
@@ -30,6 +30,8 @@ const FILTERS = [
 
 export default function Tasks() {
   const { projectId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const view = params.get('view') || 'board';
   const openTaskId = params.get('task');
@@ -52,7 +54,16 @@ export default function Tasks() {
     const next = new URLSearchParams(params);
     if (v) next.set(k, v);
     else next.delete(k);
-    setParams(next, { replace: k === 'task' ? false : true });
+    if (k === 'task' && v && !openTaskId) {
+      setParams(next, { state: { ...location.state, openedFromTaskList: true } });
+    } else {
+      setParams(next, { replace: true, state: v || k !== 'task' ? location.state : null });
+    }
+  };
+
+  const closeTask = () => {
+    if (location.state?.openedFromTaskList) navigate(-1);
+    else setParam('task', '');
   };
 
   const actions = useTaskActions(projectId, { onOpen: (id) => setParam('task', id) });
@@ -271,7 +282,7 @@ export default function Tasks() {
         </div>
       )}
       {creating && <TaskFormModal projectId={projectId} defaultStatus={creating} onClose={() => setCreating(null)} />}
-      {openTaskId && <TaskDetailPanel taskId={openTaskId} projectId={projectId} onClose={() => setParam('task', '')} />}
+      {openTaskId && <TaskDetailPanel key={openTaskId} taskId={openTaskId} projectId={projectId} onClose={closeTask} />}
       {rejected && <ConfirmDialog title="Perubahan ditolak" message={rejected} onClose={() => setRejected(null)} />}
       {actions.dialogs}
       {canCreate && (
