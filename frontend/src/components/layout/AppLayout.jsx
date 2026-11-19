@@ -190,6 +190,12 @@ function Topbar({ onInvite, onMenu }) {
   const match = useMatch('/projects/:projectId/*');
   const { data: project } = useProject(match?.params.projectId);
 
+  const canGoBack = window.history.state?.idx > 0;
+  const goBack = () => {
+    if (canGoBack) navigate(-1);
+    else if (location.pathname !== '/') navigate('/', { replace: true });
+  };
+
   let crumbs;
   if (match) {
     crumbs = (
@@ -225,7 +231,12 @@ function Topbar({ onInvite, onMenu }) {
       <button className="icon-btn mobile-only" onClick={onMenu} aria-label="Buka menu navigasi">
         <MenuIcon size={18} />
       </button>
-      <button className="icon-btn" onClick={() => navigate(-1)} aria-label="Kembali">
+      <button
+        className="icon-btn"
+        onClick={goBack}
+        disabled={!canGoBack && location.pathname === '/'}
+        aria-label="Kembali"
+      >
         <ChevronLeft size={16} />
       </button>
       <nav className="crumbs" aria-label="Breadcrumb">
