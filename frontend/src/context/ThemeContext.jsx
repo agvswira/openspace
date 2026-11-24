@@ -21,6 +21,16 @@ export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(readStored);
   const [resolved, setResolved] = useState(() => resolve(readStored()));
 
+  // Tema diganti di jendela lain dengan origin sama (tab lain, atau demo di landing page):
+  // ikuti pilihan itu di sini juga.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY || e.key === null) setThemeState(readStored());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   useEffect(() => {
     const apply = () => {
       const r = resolve(theme);

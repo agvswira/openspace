@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
+  ChevronLeft,
   X,
   Link2,
   MoreHorizontal,
@@ -42,9 +44,44 @@ export function useCan(projectId) {
   return (key) => perms === 'ALL' || (Array.isArray(perms) && perms.includes(key));
 }
 
+function TaskDrawerLayer({ children }) {
+  const layer = useRef(null);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const element = layer.current;
+    if (!viewport) return undefined;
+
+    // Di iOS, keyboard mengecilkan visual viewport tanpa mengubah layout viewport.
+    const syncViewport = () => {
+      element.style.setProperty('--task-viewport-top', `${viewport.offsetTop}px`);
+      element.style.setProperty('--task-viewport-height', `${viewport.height}px`);
+    };
+    syncViewport();
+    viewport.addEventListener('resize', syncViewport);
+    viewport.addEventListener('scroll', syncViewport);
+    return () => {
+      viewport.removeEventListener('resize', syncViewport);
+      viewport.removeEventListener('scroll', syncViewport);
+    };
+  }, []);
+
+  // Keluar dari area konten yang membentuk lapisan saat perpindahan halaman.
+  return createPortal(<div ref={layer}>{children}</div>, document.body);
+}
+
+function CloseTaskButton({ onClose }) {
+  return (
+    <button type="button" className="icon-btn task-drawer-close" onClick={onClose} aria-label="Kembali ke daftar tugas">
+      <ChevronLeft className="mobile-only" size={20} />
+      <X className="desktop-only" size={16} />
+    </button>
+  );
+}
+
 // Panel detail tugas di sisi kanan (Gambar 2.15).
 export default function TaskDetailPanel({ taskId, projectId, onClose }) {
-  const { data: task, isLoading } = useTask(taskId);
+  const { data: task, isLoading, error } = useTask(taskId);
   const { user } = useAuth();
   const can = useCan(projectId);
   const toast = useToast();
@@ -68,12 +105,17 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
 
   if (isLoading || !task) {
     return (
-      <>
+      <TaskDrawerLayer>
         <div className="drawer-overlay" onClick={onClose} />
-        <aside className="drawer" style={{ padding: 18 }}>
-          <LoadingBlock rows={6} />
+        <aside className="drawer task-drawer" aria-label="Detail tugas" role="dialog">
+          <div className="detail-head">
+            <CloseTaskButton onClose={onClose} />
+          </div>
+          <div className="detail-body" style={{ paddingTop: 14 }}>
+            {error ? <FormError message={errorMessage(error)} /> : <LoadingBlock rows={6} />}
+          </div>
         </aside>
-      </>
+      </TaskDrawerLayer>
     );
   }
 
@@ -89,9 +131,9 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
     );
 
   return (
-    <>
+    <TaskDrawerLayer>
       <div className="drawer-overlay" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label={`Detail tugas ${task.title}`}>
+      <aside className="drawer task-drawer" role="dialog" aria-label={`Detail tugas ${task.title}`}>
         <div className="detail-head">
           <div className="row-between">
             <span className="mono muted">
@@ -124,9 +166,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
                   Delete task
                 </button>
               </Menu>
-              <button className="icon-btn" onClick={onClose} aria-label="Tutup">
-                <X size={16} />
-              </button>
+              <CloseTaskButton onClose={onClose} />
             </div>
           </div>
           <h2 style={{ fontSize: 22, fontWeight: 600, margin: '12px 0 6px' }}>{task.title}</h2>
@@ -327,7 +367,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
       {rejected && (
         <ConfirmDialog title={rejected.title} message={rejected.message} onClose={() => setRejected(null)} />
       )}
-    </>
+    </TaskDrawerLayer>
   );
 }
 
@@ -424,8 +464,9 @@ function LatestComments({ taskId }) {
 }
 
 function CommentList({ taskId }) {
-  const { data: comments, isLoading } = useComments(taskId);
+  const { data: comments = [], isLoading, error } = useComments(taskId);
   if (isLoading) return <LoadingBlock rows={3} height={40} />;
+  if (error) return <FormError message={errorMessage(error)} />;
   if (!comments.length) return <p className="sm faint">Belum ada komentar. Mulai diskusi di bawah.</p>;
   return <CommentItems comments={comments} />;
 }
@@ -460,7 +501,7 @@ function CommentBox({ taskId, projectId }) {
   });
   const submit = (e) => {
     e.preventDefault();
-    if (body.trim()) send.mutate(body.trim());
+    if (!send.isPending && body.trim()) send.mutate(body.trim());
   };
   return (
     <form className="comment-box" onSubmit={submit}>
@@ -469,13 +510,19 @@ function CommentBox({ taskId, projectId }) {
         className="input grow"
         placeholder="Add a comment"
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => {
+          setBody(e.target.value);
+          if (send.isError) send.reset();
+        }}
+        maxLength={2000}
+        readOnly={send.isPending}
         aria-label="Tulis komentar"
       />
-      <button className="btn" disabled={!body.trim() || send.isPending}>
+      <button type="submit" className="btn" disabled={!body.trim() || send.isPending}>
         <Send size={14} />
         Send
       </button>
+      {send.isError && <FormError message={errorMessage(send.error)} />}
     </form>
   );
 }

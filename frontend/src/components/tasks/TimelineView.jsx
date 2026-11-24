@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Diamond, Lock, Unlink, MousePointerClick } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Diamond, Lock, Unlink } from 'lucide-react';
 import { AvatarStack } from '../ui';
 import { useContextMenu, useMenuBinder } from '../ui/ContextMenu';
 import { STATUS, StatusIcon, displayState } from '../../lib/status';
@@ -12,6 +12,124 @@ const HEAD_ROW = 34; // baris milestone di atas daftar tugas
 const VISIBLE_DAYS = 14; // jumlah hari yang muat di layar; sisanya digeser (scroll)
 const DRAG_THRESHOLD = 4; // px; di bawah ini dianggap klik biasa
 const DAY_MS = 864e5;
+const BAR_H = 26;
+const LINK_STUB = 12; // px; jarak garis keluar/masuk dari ujung bar sebelum berbelok
+const LINK_RADIUS = 6; // px; jari-jari sudut garis prasyarat
+
+// Polyline siku dengan sudut membulat (kurva kuadratik di setiap belokan).
+function roundedPath(points) {
+  const pts = points.filter((p, i) => i === 0 || p[0] !== points[i - 1][0] || p[1] !== points[i - 1][1]);
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1];
+    const [cx, cy] = pts[i];
+    const [nx, ny] = pts[i + 1];
+    const l1 = Math.hypot(cx - px, cy - py);
+    const l2 = Math.hypot(nx - cx, ny - cy);
+    const r = Math.min(LINK_RADIUS, l1 / 2, l2 / 2);
+    if (r < 1) {
+      d += ` L${cx} ${cy}`;
+      continue;
+    }
+    const ax = cx - ((cx - px) / l1) * r;
+    const ay = cy - ((cy - py) / l1) * r;
+    const bx = cx + ((nx - cx) / l2) * r;
+    const by = cy + ((ny - cy) / l2) * r;
+    d += ` L${ax} ${ay} Q${cx} ${cy} ${bx} ${by}`;
+  }
+  const [lx, ly] = pts.at(-1);
+  return `${d} L${lx} ${ly}`;
+}
+
+const LINK_SPREAD = 8; // px; jarak antar garis yang berbagi bar/celah agar tidak saling menumpuk
+const LINK_TUCK = 8; // px; garis dimulai dari balik bar prasyarat
+
+// Geser ke-k dari n garis agar tersebar simetris di sekitar titik tengah.
+const spread = (k, n, step) => (k - (n - 1) / 2) * step;
+
+// Celah kosong antarbaris tempat garis boleh lewat mendatar.
+const gapY = (a, b) => {
+  const gap = (ROW_H - BAR_H) / 2;
+  return b.y > a.y ? b.y - gap : b.y + BAR_H + gap;
+};
+
+// Rute garis dari belakang bar prasyarat (a) ke awal bar tugas yang menunggu (b).
+// Garis keluar dari balik ujung kanan bar a dan berakhir dengan panah tepat di tepi kiri bar b.
+// Ada ruang di antara keduanya: lurus ke kanan, belok tepat sebelum bar tujuan, lalu masuk.
+// Tumpang tindih: keluar sedikit ke kanan, menyusuri celah kosong di atas/bawah bar tujuan,
+// lalu masuk dari kiri, sehingga garis tidak menembus bar.
+// `o` berisi urutan garis ini di antara garis lain yang berbagi bar asal (ks/ns),
+// bar tujuan (kt/nt), atau celah (kg/ng), untuk memberi jarak di antara mereka.
+function linkRoute(a, b, o) {
+  const x1 = a.x + a.w - LINK_TUCK;
+  const y1 = a.y + BAR_H / 2 + spread(o.ks, o.ns, LINK_SPREAD);
+  const x2 = b.x;
+  const y2 = b.y + BAR_H / 2 + spread(o.kt, o.nt, LINK_SPREAD);
+  const xo = a.x + a.w + LINK_STUB + o.ks * LINK_SPREAD;
+  // Garis yang masuk ke bar-bar dengan tanggal mulai sama berbagi kolom belok yang sama;
+  // masing-masing mendapat jalur sendiri (kv) agar garis vertikalnya tidak berimpit.
+  const xi = x2 - LINK_STUB - o.kv * LINK_SPREAD;
+  if (xi - xo >= 0) {
+    return [
+      [x1, y1],
+      [xi, y1],
+      [xi, y2],
+      [x2, y2],
+    ];
+  }
+  // Ruang sempit tetapi bar tujuan berada di bawah/atas titik belok: turun (atau naik)
+  // lalu masuk dari tepi atas/bawah bar tujuan, tanpa memutar.
+  if (b.x <= xo - 6 && b.x + b.w >= xo + 6) {
+    const yEdge = b.y > a.y ? b.y : b.y + BAR_H;
+    return [
+      [x1, y1],
+      [xo, y1],
+      [xo, yEdge],
+    ];
+  }
+  const yg = gapY(a, b) + spread(o.kg, o.ng, 4);
+  return [
+    [x1, y1],
+    [xo, y1],
+    [xo, yg],
+    [xi, yg],
+    [xi, y2],
+    [x2, y2],
+  ];
+}
+
+// Beri setiap garis urutannya di antara garis yang berbagi bar asal, bar tujuan, atau celah yang sama.
+function layoutLinks(raw) {
+  // Urut dari atas ke bawah agar garis dalam satu kelompok tidak saling menyilang.
+  const sorted = [...raw].sort((p, q) => p.a.y - q.a.y || p.b.y - q.b.y);
+  const rank = (keyOf) => {
+    const groups = new Map();
+    sorted.forEach((l) => {
+      const k = keyOf(l);
+      if (k == null) return;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(l);
+    });
+    const out = new Map();
+    groups.forEach((list) => list.forEach((l, i) => out.set(l.key, { k: i, n: list.length })));
+    return out;
+  };
+  const bySource = rank((l) => l.pre.id);
+  const byTarget = rank((l) => l.task.id);
+  const byGap = rank((l) => (l.b.x - (l.a.x + l.a.w) < LINK_STUB * 2 ? gapY(l.a, l.b) : null));
+  // Jalur vertikal: garis dari bar paling atas mendapat jalur paling kanan.
+  const byColumn = rank((l) => Math.round(l.b.x));
+  return sorted.map((l) => {
+    const s = bySource.get(l.key);
+    const t = byTarget.get(l.key);
+    const g = byGap.get(l.key) || { k: 0, n: 1 };
+    const v = byColumn.get(l.key);
+    return {
+      ...l,
+      d: roundedPath(linkRoute(l.a, l.b, { ks: s.k, ns: s.n, kt: t.k, nt: t.n, kg: g.k, ng: g.n, kv: v.k })),
+    };
+  });
+}
 
 const COLORS = {
   TODO: { bg: 'var(--todo-bg)', border: 'var(--todo-border)' },
@@ -141,20 +259,8 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     setScrollX(el.scrollLeft);
   };
 
-  // Roda mouse biasa (vertikal) menggeser tanggal bila timeline tidak perlu scroll vertikal.
-  // Touchpad dan Shift + roda sudah menghasilkan scroll horizontal bawaan browser.
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return undefined;
-    const onWheel = (e) => {
-      if (e.shiftKey || e.ctrlKey || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
-      if (el.scrollHeight > el.clientHeight + 1) return;
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  // Scroll memakai perilaku bawaan browser: geser atas-bawah menggulir baris tugas
+  // (lalu halaman bila sudah di ujung), geser ke samping di touchpad atau Shift + roda menggeser tanggal.
 
   // Label rentang mengikuti hari yang sedang terlihat di layar.
   const firstVisible = Math.min(Math.max(0, Math.round(scrollX / DAY_W)), SPAN - 1);
@@ -207,24 +313,27 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
 
   // Garis prasyarat: dari ujung kanan bar prasyarat ke awal bar tugas yang menunggu.
   // Hubungan yang masih menghambat digambar tegas; yang sudah selesai digambar samar.
-  const links = [];
+  const rawLinks = [];
   visible.forEach((t) => {
     t.prerequisites.forEach((p) => {
       const a = layout.get(p.id);
       const b = layout.get(t.id);
-      if (a && b)
-        links.push({
+      if (a?.w && b?.w)
+        rawLinks.push({
           key: `${p.id}-${t.id}`,
           task: t,
           pre: p,
-          x1: a.x + a.w,
-          y1: a.y + 13,
-          x2: b.x,
-          y2: b.y + 13,
+          // Lebar bar minimal 40 px saat dirender; ujung garis mengikuti lebar yang terlihat.
+          a: { ...a, w: Math.max(a.w, 40) },
+          b,
           done: p.status === 'DONE',
         });
     });
   });
+  const links = layoutLinks(rawLinks);
+
+  // Tugas yang masih menunggu prasyarat, dirangkum di bawah timeline.
+  const waiting = visible.filter((t) => t.isBlocked && t.status !== 'DONE');
 
   // ---- Penanganan pointer ----
   const begin = (e, task, mode) => {
@@ -428,26 +537,60 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
               );
             })}
 
+          {/* Garis prasyarat digambar di bawah bar (z-index), jadi tidak menutupi judul tugas. */}
           <svg width={width} height={height} className="tl-links" aria-hidden>
+            <defs>
+              <marker
+                id="arrow"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                markerUnits="userSpaceOnUse"
+                orient="auto"
+              >
+                <path d="M1 1 L9 5 L1 9 z" fill="var(--dep-line)" />
+              </marker>
+              <marker
+                id="arrow-done"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                markerUnits="userSpaceOnUse"
+                orient="auto"
+              >
+                <path d="M1 1 L9 5 L1 9 z" fill="var(--dep-line-done)" />
+              </marker>
+              <marker
+                id="arrow-new"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="8"
+                markerHeight="8"
+                markerUnits="userSpaceOnUse"
+                orient="auto"
+              >
+                <path d="M1 1 L9 5 L1 9 z" fill="var(--primary)" />
+              </marker>
+            </defs>
             {links.map((l) => {
-              // Jika bar lanjutan dimulai setelah bar prasyarat: siku sederhana.
-              // Jika tumpang tindih: turun ke celah antarbaris dulu, lalu masuk dari kiri.
-              const d =
-                l.x2 - l.x1 >= 16
-                  ? `M${l.x1} ${l.y1} H${(l.x1 + l.x2) / 2} V${l.y2} H${l.x2}`
-                  : `M${l.x1} ${l.y1} h8 V${l.y2 - 18} H${l.x2 - 10} V${l.y2} H${l.x2}`;
+              const d = l.d;
               return (
-                <g key={l.key}>
+                <g key={l.key} className={`tl-link ${l.done ? 'done' : ''}`}>
                   <path
                     d={d}
                     fill="none"
-                    stroke={l.done ? 'var(--text-faint)' : 'var(--dep-line)'}
-                    strokeWidth="1.5"
-                    strokeDasharray="4 3"
-                    opacity={l.done ? 0.6 : 1}
+                    stroke={l.done ? 'var(--dep-line-done)' : 'var(--dep-line)'}
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    strokeLinejoin="round"
                     markerEnd={l.done ? 'url(#arrow-done)' : 'url(#arrow)'}
                   />
-                  {/* Area klik lebar di atas garis tipis untuk menghapus hubungan */}
+                  {/* Area klik lebar di atas garis untuk menghapus hubungan */}
                   {canLink && (
                     <path
                       d={d}
@@ -470,36 +613,21 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
                 </g>
               );
             })}
-            {linkSource && (
+          </svg>
+          {/* Garis sementara saat menarik prasyarat baru: di atas bar agar selalu terlihat. */}
+          {linkSource && (
+            <svg width={width} height={height} className="tl-links tl-links-live" aria-hidden>
               <path
-                d={`M${linkSource.x + linkSource.w} ${linkSource.y + 13} L${drag.px} ${drag.py}`}
+                d={`M${linkSource.x + Math.max(linkSource.w, 40)} ${linkSource.y + BAR_H / 2} L${drag.px} ${drag.py}`}
                 fill="none"
                 stroke="var(--primary)"
                 strokeWidth="2"
                 strokeDasharray="5 3"
+                strokeLinecap="round"
                 markerEnd="url(#arrow-new)"
               />
-            )}
-            <defs>
-              <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-                <path d="M0 0 L8 4 L0 8 z" fill="var(--dep-line)" />
-              </marker>
-              <marker
-                id="arrow-done"
-                viewBox="0 0 8 8"
-                refX="7"
-                refY="4"
-                markerWidth="6"
-                markerHeight="6"
-                orient="auto"
-              >
-                <path d="M0 0 L8 4 L0 8 z" fill="var(--text-faint)" />
-              </marker>
-              <marker id="arrow-new" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-                <path d="M0 0 L8 4 L0 8 z" fill="var(--primary)" />
-              </marker>
-            </defs>
-          </svg>
+            </svg>
+          )}
 
           {visible.map((t) => {
             const pos = layout.get(t.id);
@@ -603,22 +731,12 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
           )}
         </div>
       </div>
-      <p className="xs muted row" style={{ marginTop: 10, gap: 6, flexWrap: 'wrap' }}>
-        <Lock size={12} className="st-BLOCKED" />
-        Dashed line = dependency. Swipe left/right on the touchpad (or use the scrollbar / Shift + wheel) to move
-        between dates.
-        {(canEdit || canLink) && (
-          <span className="row" style={{ gap: 4 }}>
-            <MousePointerClick size={12} />
-            {canEdit && 'Drag a bar to reschedule, drag its edges to change dates. '}
-            {canLink && 'Drag the dot on a bar onto another task to add a dependency; click a line to remove it.'}
-          </span>
-        )}{' '}
-        {visible
-          .filter((t) => t.isBlocked && t.status !== 'DONE')
-          .map((t) => `${t.title} waits for ${t.waitingFor.map((w) => w.title).join(', ')}`)
-          .join(' · ')}
-      </p>
+      {waiting.length > 0 && (
+        <p className="xs muted row" style={{ marginTop: 10, gap: 6, flexWrap: 'wrap' }}>
+          <Lock size={12} className="st-BLOCKED" />
+          {waiting.map((t) => `${t.title} waits for ${t.waitingFor.map((w) => w.title).join(', ')}`).join(' · ')}
+        </p>
+      )}
     </div>
   );
 }
