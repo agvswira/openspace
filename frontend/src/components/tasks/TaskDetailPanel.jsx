@@ -19,6 +19,9 @@ import {
   ExternalLink,
   Pencil,
   Send,
+  Eye,
+  CircleCheck,
+  RotateCcw,
 } from 'lucide-react';
 import { api, errorMessage } from '../../api/client';
 import {
@@ -79,11 +82,104 @@ function CloseTaskButton({ onClose }) {
   );
 }
 
+// Alur review: anggota mengirim tugas ke Owner (In review); hanya Owner yang menyetujui menjadi Done
+// atau mengembalikannya ke In progress dengan catatan revisi.
+function ReviewBox({ task, isOwner, canStatus, onRequest, busy, onReject }) {
+  const [note, setNote] = useState('');
+  const review = useApiMutation((body) => api.post(`/tasks/${task.id}/review`, body), {
+    invalidate: [...projectTaskKeys(task.projectId), keys.comments(task.id)],
+  });
+  const toast = useToast();
+  const decide = (decision) =>
+    review.mutate(
+      { decision, note: note.trim() || null },
+      {
+        onSuccess: () => {
+          setNote('');
+          toast(decision === 'approve' ? 'Tugas disetujui dan ditandai Done' : 'Tugas dikembalikan untuk revisi');
+        },
+        onError: (e) => onReject(errorMessage(e)),
+      },
+    );
+
+  if (task.status === 'DONE') {
+    return (
+      <div className="review-box review-done">
+        <CircleCheck size={16} />
+        <div className="grow">
+          <strong className="sm">Approved by Owner</strong>
+          {task.completedAt && <div className="xs muted">Done · {fmtLong(task.completedAt)}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (task.status === 'IN_REVIEW') {
+    if (!isOwner) {
+      return (
+        <div className="review-box">
+          <Eye size={16} />
+          <div className="grow">
+            <strong className="sm">Waiting for Owner review</strong>
+            <div className="xs muted">The task will move to Done once the Owner approves it.</div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="review-box" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        <div className="row" style={{ alignItems: 'flex-start' }}>
+          <Eye size={16} style={{ marginTop: 2 }} />
+          <div className="grow">
+            <strong className="sm">Review requested</strong>
+            <div className="xs muted">Check the work (links and comments), then approve it or ask for changes.</div>
+          </div>
+        </div>
+        <textarea
+          className="input"
+          rows={2}
+          placeholder="Note for the assignee (optional)"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-label="Catatan review"
+          style={{ resize: 'vertical', minHeight: 56, padding: 8 }}
+        />
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <button className="btn btn-sm" disabled={review.isPending} onClick={() => decide('reject')}>
+            <RotateCcw size={13} />
+            Request changes
+          </button>
+          <button className="btn btn-sm btn-approve" disabled={review.isPending} onClick={() => decide('approve')}>
+            <CircleCheck size={13} />
+            Approve
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isOwner || !canStatus) return null;
+  return (
+    <div className="review-box">
+      <Eye size={16} />
+      <div className="grow">
+        <strong className="sm">Finished?</strong>
+        <div className="xs muted">Send it to the Owner for review. Only the Owner can mark it Done.</div>
+      </div>
+      <button className="btn btn-sm btn-primary" disabled={busy} onClick={onRequest}>
+        Request review
+      </button>
+    </div>
+  );
+}
+
 // Panel detail tugas di sisi kanan (Gambar 2.15).
 export default function TaskDetailPanel({ taskId, projectId, onClose }) {
   const { data: task, isLoading, error } = useTask(taskId);
   const { user } = useAuth();
   const can = useCan(projectId);
+  const { data: project } = useProject(projectId);
+  const isOwner = !!project?.access?.isOwner;
   const toast = useToast();
   const [tab, setTab] = useState('details');
   const [editing, setEditing] = useState(false);
@@ -216,13 +312,21 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
         {tab === 'details' && (
           <>
             <div className="detail-body" style={{ paddingTop: 14 }}>
+              <ReviewBox
+                task={task}
+                isOwner={isOwner}
+                canStatus={canStatus}
+                busy={update.isPending}
+                onRequest={() => changeStatus('IN_REVIEW')}
+                onReject={(message) => setRejected({ title: 'Review gagal', message })}
+              />
               <dl className="prop-grid">
                 <dt>
                   <CircleDot size={14} />
                   Status
                 </dt>
                 <dd>
-                  {canStatus ? (
+                  {canStatus && (isOwner || task.status !== 'DONE') ? (
                     <select
                       className={`inline-select st-${task.status}`}
                       value={task.status}
@@ -231,8 +335,9 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
                       disabled={update.isPending}
                     >
                       {STATUS_ORDER.map((s) => (
-                        <option key={s} value={s}>
+                        <option key={s} value={s} disabled={s === 'DONE' && !isOwner}>
                           {STATUS[s].label}
+                          {s === 'DONE' && !isOwner ? ' (Owner only)' : ''}
                         </option>
                       ))}
                     </select>

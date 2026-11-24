@@ -36,7 +36,14 @@ function phase(m) {
   return 'upcoming';
 }
 
-const SEG = { DONE: '#16a34a', OVERDUE: '#dc2626', BLOCKED: '#d97706', IN_PROGRESS: '#ea580c', TODO: '#2563eb' };
+const SEG = {
+  DONE: '#16a34a',
+  OVERDUE: '#dc2626',
+  BLOCKED: '#d97706',
+  IN_PROGRESS: '#ea580c',
+  IN_REVIEW: '#9333ea',
+  TODO: '#2563eb',
+};
 
 export function MilestoneCard({ m, projectId, canManage, onEdit, onDelete, full }) {
   const navigate = useNavigate();

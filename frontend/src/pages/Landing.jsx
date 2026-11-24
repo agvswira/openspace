@@ -5,7 +5,7 @@ import {
   CalendarDays,
   ChartGantt,
   ChevronDown,
-  CircleCheck,
+  CalendarCheck,
   Diamond,
   FolderPlus,
   Kanban,
@@ -52,7 +52,7 @@ const STEPS = [
     icon: UserPlus,
     tag: 'Tim',
     title: 'Undang tim',
-    text: 'Kirim undangan lewat email dan pilih peran setiap anggota.',
+    text: 'Undang anggota dari halaman Members dan pilih peran setiap orang.',
   },
   {
     n: '03',
@@ -66,7 +66,7 @@ const STEPS = [
     icon: LayoutDashboard,
     tag: 'Pantau',
     title: 'Pantau progres',
-    text: 'Overview menunjukkan tugas terlambat, terhambat, dan beban kerja.',
+    text: 'Overview menunjukkan progres, kontribusi tiap anggota, dan kehadiran rapat.',
   },
 ];
 
@@ -74,6 +74,10 @@ const FAQ = [
   {
     q: 'Apa itu Openspace?',
     a: 'Aplikasi manajemen proyek untuk tim kecil seperti kepanitiaan atau kerja kelompok. Tugas, milestone, rapat, dan anggota ada dalam satu ruang kerja.',
+  },
+  {
+    q: 'Kapan sebuah tugas dianggap selesai?',
+    a: 'Anggota mengerjakan tugas, melampirkan bukti seperti notulen atau laporan, lalu mengirimnya ke In review. Hanya Owner yang bisa menyetujui. Setelah disetujui, tugas masuk ke Done dan dihitung dalam progres serta kontribusi anggota.',
   },
   {
     q: 'Apa yang terjadi kalau sebuah tugas harus menunggu tugas lain?',
@@ -326,33 +330,38 @@ export default function Landing() {
                   <span style={{ width: '75%' }} />
                 </span>
                 <div className="lp-ms-row lp-ms-item">
-                  <CircleCheck size={14} className="lp-green" />
-                  Hasil rapat: cetak 200 brosur
-                  <ArrowRight size={13} />
-                  <span className="lp-chip lp-chip-sm">Tugas</span>
+                  <CalendarCheck size={14} className="lp-green" />
+                  Rapat koordinasi
+                  <span className="lp-att lp-att-present">Present 3</span>
+                  <span className="lp-att lp-att-late">Late 1</span>
                 </div>
               </div>
-              <h3>Milestone dan rapat</h3>
-              <p>Kelompokkan tugas ke milestone, lalu jadikan action item rapat sebagai tugas terjadwal.</p>
+              <h3>Milestone dan kehadiran rapat</h3>
+              <p>
+                Kelompokkan tugas ke milestone, lalu catat siapa yang hadir, terlambat, izin, atau absen di tiap rapat.
+              </p>
             </article>
 
             <article className="lp-card">
               <div className="lp-stats" aria-hidden>
                 <span>
-                  <b className="lp-red">Terlambat</b>
-                  <em>Tugas lewat tenggat</em>
+                  <b className="lp-purple">In review</b>
+                  <em>Menunggu persetujuan Owner</em>
                 </span>
                 <span>
-                  <b className="lp-amber">Blocked</b>
-                  <em>Menunggu prasyarat</em>
+                  <b className="lp-green">Done</b>
+                  <em>Sudah disetujui Owner</em>
                 </span>
                 <span>
-                  <b className="lp-green">Selesai</b>
-                  <em>Progres per milestone</em>
+                  <b className="lp-amber">Kehadiran</b>
+                  <em>Rekap tiap rapat</em>
                 </span>
               </div>
               <h3>Overview untuk koordinator</h3>
-              <p>Lihat risiko jadwal dan beban kerja tiap anggota tanpa bertanya satu per satu.</p>
+              <p>
+                Lihat progres dan kontribusi tiap anggota, tugas yang menunggu review, dan kehadiran rapat dalam satu
+                halaman.
+              </p>
             </article>
 
             <article className="lp-card lp-span-3 lp-card-split">

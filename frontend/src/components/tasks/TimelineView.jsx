@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Diamond, Lock, Unlink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Unlink } from 'lucide-react';
 import { AvatarStack } from '../ui';
 import { useContextMenu, useMenuBinder } from '../ui/ContextMenu';
 import { STATUS, StatusIcon, displayState } from '../../lib/status';
@@ -8,7 +8,7 @@ import { scheduleBody, shiftSpan, spanOf } from '../../lib/taskGuards';
 
 const MIN_DAY_W = 56;
 const ROW_H = 36;
-const HEAD_ROW = 34; // baris milestone di atas daftar tugas
+const HEAD_ROW = 8; // jarak kecil di atas baris tugas pertama
 const VISIBLE_DAYS = 14; // jumlah hari yang muat di layar; sisanya digeser (scroll)
 const DRAG_THRESHOLD = 4; // px; di bawah ini dianggap klik biasa
 const DAY_MS = 864e5;
@@ -134,6 +134,7 @@ function layoutLinks(raw) {
 const COLORS = {
   TODO: { bg: 'var(--todo-bg)', border: 'var(--todo-border)' },
   IN_PROGRESS: { bg: 'var(--progress-bg)', border: 'var(--progress-border)' },
+  IN_REVIEW: { bg: 'var(--purple-bg)', border: 'var(--review-border)' },
   DONE: { bg: 'var(--done-bg)', border: 'var(--done-border)' },
   OVERDUE: { bg: 'var(--overdue-bg)', border: 'var(--overdue-border)' },
   BLOCKED: { bg: 'var(--blocked-bg)', border: 'var(--blocked-border)' },
@@ -157,7 +158,7 @@ function rangeLabel(a, b) {
  *  - klik garis prasyarat  → hapus hubungan
  * Semua perubahan tetap divalidasi backend (izin role, siklus, status tugas).
  */
-export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, bulk }) {
+export default function TimelineView({ tasks, onOpen, menuFor, bulk }) {
   const today = startOfDay();
   const bind = useMenuBinder();
   const openMenu = useContextMenu();
@@ -209,7 +210,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
   };
 
   // ---- Rentang tanggal = dari tugas paling awal sampai tugas paling akhir ----
-  // Timeline hanya bisa digeser sejauh tanggal yang memang berisi tugas (dan milestone), ditambah
+  // Timeline hanya bisa digeser sejauh tanggal yang memang berisi tugas, ditambah
   // 1 hari ruang di tiap sisi. Tugas baru atau bar yang dipindah keluar rentang otomatis
   // memperluas rentang. Bila rentang lebih pendek dari 14 hari, rentang dilebarkan ke kedua sisi
   // agar grid tetap memenuhi panel.
@@ -226,7 +227,6 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
     const sp = pendingDates[t.id] || spanOf(t);
     include(sp.s, sp.e);
   });
-  milestones.filter((m) => m.dueDate).forEach((m) => include(startOfDay(m.dueDate), startOfDay(m.dueDate)));
   if (!minS) {
     minS = addDays(today, -6);
     maxE = addDays(today, VISIBLE_DAYS - 7);
@@ -450,7 +450,7 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
           </button>
         </div>
         <div className="tl-legend">
-          {['TODO', 'IN_PROGRESS', 'DONE', 'OVERDUE', 'BLOCKED'].map((s) => (
+          {['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'OVERDUE', 'BLOCKED'].map((s) => (
             <span key={s} className={`row st-${s}`} style={{ gap: 4 }}>
               <StatusIcon status={s} size={12} />
               {STATUS[s].label}
@@ -507,35 +507,6 @@ export default function TimelineView({ tasks, milestones = [], onOpen, menuFor, 
               }}
             />
           )}
-
-          {milestones
-            .filter((m) => m.dueDate)
-            .map((m) => {
-              const i = diffDays(m.dueDate, start);
-              if (i < 0 || i >= SPAN) return null;
-              // Milestone di 3 kolom terakhir diratakan kanan agar tidak keluar dari grid.
-              const anchor = i >= SPAN - 3 ? { right: (SPAN - i - 1) * DAY_W + 6 } : { left: i * DAY_W + 6 };
-              return (
-                <span
-                  key={m.id}
-                  className="badge"
-                  style={{
-                    position: 'absolute',
-                    top: 6,
-                    ...anchor,
-                    background: 'var(--purple-bg)',
-                    color: 'var(--purple)',
-                    zIndex: 1,
-                  }}
-                >
-                  <Diamond size={11} fill="currentColor" />
-                  {m.name}
-                  <span className="mono">
-                    {m.progress.done}/{m.progress.total}
-                  </span>
-                </span>
-              );
-            })}
 
           {/* Garis prasyarat digambar di bawah bar (z-index), jadi tidak menutupi judul tugas. */}
           <svg width={width} height={height} className="tl-links" aria-hidden>

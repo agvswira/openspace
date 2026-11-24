@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Check, MoreHorizontal, ExternalLink, CircleCheck, RotateCcw, Link2 } from 'lucide-react';
+import { Calendar, Check, MoreHorizontal, ExternalLink, CircleCheck, RotateCcw, Link2, Eye } from 'lucide-react';
 import { api, errorMessage } from '../../api/client';
-import { projectTaskKeys, useApiMutation } from '../../api/hooks';
+import { projectTaskKeys, useApiMutation, useProjects } from '../../api/hooks';
 import { ConfirmDialog, Menu, ProjectMark } from '../ui';
 import { PriorityFlag, StatusBadge, StatusIcon, displayState } from '../../lib/status';
 import { fmtShort } from '../../lib/format';
@@ -15,20 +15,30 @@ export default function TaskRow({ task, showMilestone = false, showMenu = false 
   const toast = useToast();
   const [rejected, setRejected] = useState(null);
   const done = task.status === 'DONE';
+  const { data: projects } = useProjects();
+  // Hanya Owner yang dapat menandai Done; anggota lain mengirim tugas ke In review.
+  const isOwner = !!projects?.find((p) => p.id === task.projectId)?.role?.isOwner;
+  const inReview = task.status === 'IN_REVIEW';
+  const locked = !isOwner && (done || inReview);
   const state = displayState(task);
   const open = () => navigate(`/projects/${task.projectId}/tasks?task=${task.id}`);
 
   const toggle = useApiMutation((status) => api.patch(`/tasks/${task.id}`, { status }), {
     invalidate: projectTaskKeys(task.projectId),
-    onSuccess: (_d, status) => toast(status === 'DONE' ? 'Tugas ditandai selesai' : 'Tugas dibuka kembali'),
+    onSuccess: (_d, status) =>
+      toast(
+        { DONE: 'Tugas ditandai selesai', IN_REVIEW: 'Dikirim ke Owner untuk review' }[status] ??
+          'Tugas dibuka kembali',
+      ),
   });
-  const setDone = (value) => toggle.mutate(value ? 'DONE' : 'TODO', { onError: (e) => setRejected(errorMessage(e)) });
+  const setDone = (value) =>
+    toggle.mutate(value ? (isOwner ? 'DONE' : 'IN_REVIEW') : 'TODO', { onError: (e) => setRejected(errorMessage(e)) });
   const bind = useMenuBinder();
   const menu = bind(() => [
     { label: 'Open task', icon: ExternalLink, onSelect: open },
-    {
-      label: done ? 'Mark as not done' : 'Mark as done',
-      icon: done ? RotateCcw : CircleCheck,
+    !locked && {
+      label: done ? 'Mark as not done' : isOwner ? 'Mark as done' : 'Request review',
+      icon: done ? RotateCcw : isOwner ? CircleCheck : Eye,
       onSelect: () => setDone(!done),
     },
     {
@@ -48,7 +58,8 @@ export default function TaskRow({ task, showMilestone = false, showMenu = false 
         className={`task-check ${done ? 'checked' : ''}`}
         aria-label={done ? `Buka kembali ${task.title}` : `Tandai ${task.title} selesai`}
         aria-pressed={done}
-        disabled={toggle.isPending}
+        disabled={toggle.isPending || locked}
+        title={locked ? (done ? 'Disetujui Owner' : 'Menunggu review Owner') : undefined}
         onClick={(e) => {
           e.stopPropagation();
           setDone(!done);

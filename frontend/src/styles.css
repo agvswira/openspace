@@ -68,6 +68,7 @@
   --todo-border: #bfdbfe;
   --progress-border: #fed7aa;
   --done-border: #bbf7d0;
+  --review-border: #e9d5ff;
   --overdue-border: #fecaca;
   --blocked-border: #fde68a;
   --dep-line: #d97706;
@@ -131,6 +132,7 @@
   --todo-border: rgba(59, 130, 246, 0.4);
   --progress-border: rgba(249, 115, 22, 0.4);
   --done-border: rgba(34, 197, 94, 0.4);
+  --review-border: rgba(168, 85, 247, 0.4);
   --overdue-border: rgba(239, 68, 68, 0.4);
   --blocked-border: rgba(245, 158, 11, 0.4);
   --dep-line: #f59e0b;
@@ -576,6 +578,8 @@ p {
 .content {
   flex: 1;
   overflow: auto;
+  /* Ruang scrollbar selalu disediakan, jadi isi tidak bergeser saat pindah halaman/tampilan */
+  scrollbar-gutter: stable;
 }
 .page {
   padding: 28px 32px 40px;
@@ -687,6 +691,12 @@ p {
 }
 .bg-IN_PROGRESS {
   background: var(--progress-bg);
+}
+.st-IN_REVIEW {
+  color: var(--purple);
+}
+.bg-IN_REVIEW {
+  background: var(--purple-bg);
 }
 .st-DONE {
   color: var(--done);
@@ -1129,7 +1139,7 @@ p {
 /* ===== Board ===== */
 .board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
   gap: 14px;
   align-items: stretch; /* kolom pendek ikut setinggi kolom terpanjang: ruang kosongnya tetap area jatuh */
 }
@@ -1665,7 +1675,7 @@ p {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .board {
-    grid-template-columns: repeat(3, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, minmax(200px, 1fr));
   }
 }
 
@@ -2646,15 +2656,16 @@ svg circle {
 }
 
 /* --- Pindah halaman & pindah tampilan (Board/List/Calendar/Timeline) ---
-   Utama: View Transitions API (lihat main.jsx). Hanya area konten yang beranimasi: halaman
-   lama memudar cepat, halaman baru masuk dengan fade + naik sedikit. Sidebar & topbar diam,
-   sedangkan penanda menu/tab aktif "meluncur" ke posisi barunya.
-   Cadangan (browser tanpa View Transitions): fade-in saja. Sengaja tanpa transform agar
-   elemen position:fixed di dalam halaman (bilah aksi massal, tombol +) tidak bergeser. */
+   Sederhana: hanya memudar (tanpa bergeser), singkat, dan hanya di area yang berubah.
+   Pindah halaman: area konten crossfade lewat View Transitions API (lihat main.jsx).
+   Pindah tampilan tugas: hanya isi tampilan (.view-swap) yang memudar; judul, tab, dan
+   filter diam. Sengaja tanpa transform agar elemen position:fixed tidak bergeser. */
 .page,
-.page-wide,
+.page-wide {
+  animation: page-in 0.16s var(--ease);
+}
 .view-swap {
-  animation: page-in 0.2s var(--ease);
+  animation: page-in 0.14s var(--ease);
 }
 @keyframes page-in {
   from {
@@ -2663,21 +2674,11 @@ svg circle {
 }
 @supports (view-transition-name: none) {
   .page,
-  .page-wide,
-  .view-swap {
+  .page-wide {
     animation: none;
   }
   .content {
     view-transition-name: content;
-  }
-  .content .tabs .tab.active {
-    view-transition-name: tab-active;
-  }
-  .mobile-tabs .mobile-tab.active {
-    view-transition-name: mobile-tab-active;
-  }
-  .bottom-nav .bnav-item.active {
-    view-transition-name: bnav-active;
   }
 }
 /* Seluruh halaman (root) tidak di-crossfade: hanya bagian bernama di atas yang bergerak. */
@@ -2686,13 +2687,13 @@ svg circle {
   animation: none;
 }
 ::view-transition-old(content) {
-  animation: vt-out 0.14s var(--ease-in-out) both;
+  animation: vt-out 0.1s var(--ease-in-out) both;
 }
 ::view-transition-new(content) {
-  animation: vt-in 0.28s var(--ease) both;
+  animation: vt-in 0.16s var(--ease) both;
 }
 ::view-transition-group(content) {
-  animation-duration: 0.28s;
+  animation-duration: 0.16s;
 }
 @keyframes vt-out {
   to {
@@ -2702,14 +2703,7 @@ svg circle {
 @keyframes vt-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
-}
-::view-transition-group(tab-active),
-::view-transition-group(mobile-tab-active),
-::view-transition-group(bnav-active) {
-  animation-duration: 0.28s;
-  animation-timing-function: var(--ease);
 }
 .view-swap {
   flex: 1;
@@ -2832,4 +2826,396 @@ html.theme-anim *::after {
   .bulk-bar {
     animation: fade-in 0.18s var(--ease);
   }
+}
+
+/* Overview: progres dan kontribusi anggota */
+.contrib-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(64px, 1fr)) minmax(170px, 2.2fr) minmax(90px, 1.1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  text-align: left;
+  font-size: 14px;
+}
+.contrib-headrow {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.contrib-row > :first-child {
+  text-align: left;
+}
+.contrib-row > :nth-child(n + 2):nth-child(-n + 6),
+.contrib-row > :nth-child(8) {
+  text-align: center;
+}
+.contrib-row .mono {
+  font-size: 15px;
+}
+.contrib-pct {
+  font-weight: 600;
+}
+.contrib-bar {
+  height: 8px;
+  margin-top: 6px;
+}
+.contrib-people {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.contrib-name {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contrib-role {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.contrib-member {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.contrib-member:hover {
+  background: var(--bg-muted);
+}
+.contrib-member:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+/* Layar menengah: In progress dan Overdue disembunyikan agar tabel tidak meluber */
+@media (max-width: 1100px) {
+  .contrib-hide-md {
+    display: none;
+  }
+  .contrib-row {
+    grid-template-columns: minmax(150px, 2fr) repeat(3, minmax(60px, 1fr)) minmax(120px, 1.8fr) minmax(80px, 1fr);
+    gap: 10px;
+    padding: 12px 14px;
+  }
+}
+@media (max-width: 768px) {
+  .contrib-hide-sm {
+    display: none;
+  }
+  .contrib-row {
+    grid-template-columns: minmax(0, 1.6fr) 58px 40px minmax(72px, 1fr);
+    gap: 8px;
+    padding: 10px 12px;
+  }
+}
+
+/* Alur review tugas */
+.review-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--review-border);
+  border-radius: var(--radius);
+  background: var(--purple-bg);
+  color: var(--purple);
+}
+.review-box strong,
+.review-box .grow {
+  color: var(--text);
+}
+.review-box.review-done {
+  border-color: var(--done-border);
+  background: var(--done-bg);
+  color: var(--done);
+}
+.btn-approve {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+.btn-approve:hover:not(:disabled) {
+  background: #15803d;
+  border-color: #15803d;
+}
+
+/* Bar filter halaman Tasks */
+.tasks-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tasks-toolbar .tabs {
+  border: none;
+  flex: none;
+}
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+}
+.filter-search {
+  width: 200px;
+}
+.filter-search .input,
+.filter-btn {
+  height: 34px;
+}
+.filter-btn {
+  gap: 6px;
+  font-weight: 500;
+}
+.filter-btn.active {
+  border-color: var(--primary-border-strong);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.filter-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.filter-check {
+  height: 34px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.filter-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.filter-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 768px) {
+  .tasks-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-bar {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .filter-search {
+    flex: none;
+    width: 180px;
+  }
+  .filter-bar > * {
+    flex: none;
+  }
+}
+
+/* Meetings: pilih peserta dan kehadiran */
+.attendee-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.attendee-picker .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.attendee-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.attendee-item {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.attendee-item:last-child {
+  border-bottom: none;
+}
+/* Warna kehadiran: Present hijau, Late oranye, Excused biru, Absent merah */
+.att-PRESENT {
+  --att: var(--done);
+  --att-bg: var(--done-bg);
+  --att-solid: #16a34a;
+}
+.att-LATE {
+  --att: var(--progress);
+  --att-bg: var(--progress-bg);
+  --att-solid: #ea580c;
+}
+.att-EXCUSED {
+  --att: var(--todo);
+  --att-bg: var(--todo-bg);
+  --att-solid: #2563eb;
+}
+.att-ABSENT {
+  --att: var(--overdue);
+  --att-bg: var(--overdue-bg);
+  --att-solid: #dc2626;
+}
+.att-NONE {
+  --att: var(--text-muted);
+  --att-bg: var(--bg-muted);
+  --att-solid: var(--text-muted);
+}
+.att-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--att-bg);
+  color: var(--att);
+  font-size: 12px;
+  font-weight: 500;
+}
+.att-pill.on {
+  background: var(--att-solid);
+  color: #fff;
+}
+.att-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.att-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.att-seg {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+}
+.att-seg button {
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: var(--att-bg);
+  color: var(--att);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.att-seg button:hover:not(.on):not(:disabled) {
+  border-color: var(--att);
+}
+.att-seg button.on {
+  background: var(--att-solid);
+  color: #fff;
+  font-weight: 600;
+}
+@media (max-width: 768px) {
+  .attendance-row {
+    flex-wrap: wrap;
+  }
+  .att-seg {
+    width: 100%;
+  }
+  .att-seg button {
+    flex: 1;
+    padding: 6px 4px;
+  }
+}
+
+.meeting-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-self: start;
+  min-width: 0;
+}
+
+/* Overview: kehadiran rapat terakhir */
+.meeting-att-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) 2fr minmax(90px, 140px);
+  align-items: center;
+  gap: 14px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--border);
+  color: inherit;
+  text-decoration: none;
+}
+.meeting-att-row:hover {
+  background: var(--bg-muted);
+}
+@media (max-width: 768px) {
+  .meeting-att-row {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
+  .meeting-att-pills {
+    display: none !important;
+  }
+}
+
+/* Overview: pie chart Task status */
+.status-pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 28px;
+  margin: 16px 0 12px;
+}
+.status-pie svg {
+  flex: none;
+}
+.status-pie .legend {
+  flex: 1;
+  min-width: 220px;
+}
+.card-head .filter-bar {
+  padding-bottom: 0;
+}
+
+/* Judul kartu dengan angka ringkasan tepat di bawahnya */
+.card-head-stack {
+  align-items: center;
+  gap: 12px;
+}
+.head-sub {
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+.head-sub .stat-num {
+  line-height: 1.15;
 }

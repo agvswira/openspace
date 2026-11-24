@@ -1,28 +1,49 @@
 import { useState } from 'react';
-import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { ListChecks, LoaderCircle, CircleAlert, Lock, Plus, Share2, UserPlus, Check, X, Flag } from 'lucide-react';
-import { useOverview, useProject, useTasks } from '../api/hooks';
-import { AvatarStack, Avatar, EmptyState, ErrorState, LoadingBlock } from '../components/ui';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ListChecks, CircleAlert, Lock, Plus, UserPlus, Check, X, Flag } from 'lucide-react';
+import { useMeetings, useOverview, useProject, useTasks } from '../api/hooks';
+import { AvatarStack, EmptyState, ErrorState, LoadingBlock } from '../components/ui';
 import { StatusBadge, StatusIcon, displayState } from '../lib/status';
 import { addDays, fmtLong, fmtShort, relativeDue, startOfDay } from '../lib/format';
 import TaskFormModal from '../components/tasks/TaskFormModal';
+import ContributionPanel from '../components/overview/ContributionPanel';
+import MeetingAttendance from '../components/overview/MeetingAttendance';
 import { useCan } from '../components/tasks/TaskDetailPanel';
 
-function Stat({ icon: Icon, tone, label, value, foot, footTone }) {
+// Pie (donut) chart sederhana untuk komposisi status tugas.
+function StatusPie({ parts, size = 120, label }) {
+  const total = parts.reduce((n, p) => n + p.value, 0);
+  const r = 16;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
   return (
-    <div className="card stat">
-      <div className="row">
-        <span className={`stat-ic bg-${tone} st-${tone}`}>
-          <Icon size={16} />
-        </span>
-        <span className="sm muted">{label}</span>
-      </div>
-      <div className="row" style={{ alignItems: 'baseline', gap: 6 }}>
-        <span className="stat-num">{value}</span>
-        <span className="xs muted">tasks</span>
-      </div>
-      <span className={`xs ${footTone ? `st-${footTone}` : 'muted'}`}>{foot}</span>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 40 40" role="img" aria-label={`Task status ${label}`}>
+      <circle cx="20" cy="20" r={r} fill="none" stroke="var(--bg-muted)" strokeWidth="7" />
+      {total > 0 &&
+        parts.map((p, i) => {
+          if (!p.value) return null;
+          const len = (p.value / total) * c;
+          const el = (
+            <circle
+              key={i}
+              cx="20"
+              cy="20"
+              r={r}
+              fill="none"
+              stroke={p.color}
+              strokeWidth="7"
+              strokeDasharray={`${len} ${c - len}`}
+              strokeDashoffset={-offset}
+              transform="rotate(-90 20 20)"
+            />
+          );
+          offset += len;
+          return el;
+        })}
+      <text x="20" y="21.5" textAnchor="middle" fontSize="6.5" fontWeight="700" fill="var(--text)">
+        {label}
+      </text>
+    </svg>
   );
 }
 
@@ -33,11 +54,11 @@ function Onboarding({ project, onInvite, onTask, onClose }) {
     {
       done: project.members.length > 1,
       label: 'Invite your team',
-      desc: 'Members join with a role you choose.',
+      desc: 'Invite members from the Members page.',
       action: (
         <button className="btn btn-sm" onClick={onInvite}>
           <UserPlus size={13} />
-          Invite
+          Go to Members
         </button>
       ),
     },
@@ -86,15 +107,16 @@ function Onboarding({ project, onInvite, onTask, onClose }) {
   );
 }
 
-// Ringkasan status untuk kartu Task status. "This sprint" = tugas dengan deadline dalam 7 hari ke belakang/depan.
+// Ringkasan status untuk kartu Task status. "This week" = tugas dengan deadline pada minggu ini (Senin–Minggu).
 function statusSummary(tasks, scope) {
-  const from = addDays(startOfDay(), -7);
-  const to = addDays(startOfDay(), 8);
+  const today = startOfDay();
+  const from = addDays(today, -((today.getDay() + 6) % 7));
+  const to = addDays(from, 7);
   const list =
     scope === 'all'
       ? tasks
       : tasks.filter((t) => !t.dueDate || (new Date(t.dueDate) >= from && new Date(t.dueDate) < to));
-  const byStatus = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
+  const byStatus = { TODO: 0, IN_PROGRESS: 0, IN_REVIEW: 0, DONE: 0 };
   list.forEach((t) => byStatus[t.status]++);
   return {
     total: list.length,
@@ -109,12 +131,12 @@ export default function Overview() {
   const { projectId } = useParams();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { openInvite } = useOutletContext();
   const can = useCan(projectId);
   const { data: project } = useProject(projectId);
   const { data: o, isLoading, error, refetch } = useOverview(projectId);
   const { data: tasks = [] } = useTasks(projectId);
-  const [scope, setScope] = useState('sprint');
+  const { data: meetings = [] } = useMeetings(projectId);
+  const [scope, setScope] = useState('all');
   const [creating, setCreating] = useState(false);
   const [hideOnboarding, setHideOnboarding] = useState(false);
   const openTask = (id) => navigate(`/projects/${projectId}/tasks?task=${id}`);
@@ -148,12 +170,6 @@ export default function Overview() {
         </div>
         <div className="row">
           <AvatarStack users={project.members} size={28} />
-          {project.access.isOwner && (
-            <button className="btn" onClick={openInvite}>
-              <Share2 size={14} />
-              Share
-            </button>
-          )}
           {can('CREATE_TASKS') && (
             <button className="btn btn-primary" onClick={() => setCreating(true)}>
               <Plus size={15} />
@@ -166,7 +182,7 @@ export default function Overview() {
       {showOnboarding && (
         <Onboarding
           project={project}
-          onInvite={openInvite}
+          onInvite={() => navigate(`/projects/${projectId}/members`)}
           onTask={() => setCreating(true)}
           onClose={() => {
             setHideOnboarding(true);
@@ -184,79 +200,67 @@ export default function Overview() {
         </div>
       ) : (
         <>
-          <div className="stat-grid">
-            <Stat
-              icon={ListChecks}
-              tone="TODO"
-              label="All tasks"
-              value={o.total}
-              foot={`${o.completedThisWeek} completed this week`}
-            />
-            <Stat
-              icon={LoaderCircle}
-              tone="IN_PROGRESS"
-              label="In progress"
-              value={st.byStatus.IN_PROGRESS}
-              foot={`${o.dueSoonInProgress} due by tomorrow`}
-            />
-            <Stat
-              icon={CircleAlert}
-              tone="OVERDUE"
-              label="Overdue"
-              value={o.overdue}
-              foot={o.overdue ? 'Needs action today' : 'Nothing overdue'}
-              footTone={o.overdue ? 'OVERDUE' : undefined}
-            />
-            <Stat
-              icon={Lock}
-              tone="BLOCKED"
-              label="Blocked"
-              value={o.blocked}
-              foot={o.blocked ? 'Waiting on prerequisites' : 'Nothing blocked'}
-              footTone={o.blocked ? 'BLOCKED' : undefined}
-            />
-          </div>
+          <ContributionPanel
+            tasks={tasks}
+            members={project.members}
+            meetings={meetings}
+            onOpenMember={(m) => navigate(`/projects/${projectId}/tasks?view=list&assignee=${m.id}`)}
+          />
 
           <div className="grid-2" style={{ marginTop: 14 }}>
             <section className="card">
               <div className="card-head">
-                <span className="card-title">Task status</span>
+                <div>
+                  <span className="card-title">Task status</span>
+                  <div className="row head-sub">
+                    <span className="stat-num">{st.total}</span>
+                    <span className="xs muted">tasks · {st.percent}% done</span>
+                  </div>
+                </div>
                 <select
                   className="select select-sm"
                   value={scope}
                   onChange={(e) => setScope(e.target.value)}
                   aria-label="Rentang tugas"
                 >
-                  <option value="sprint">This sprint</option>
+                  <option value="week">This week</option>
                   <option value="all">All time</option>
                 </select>
               </div>
               <div style={{ padding: '0 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div className="row" style={{ alignItems: 'baseline' }}>
-                  <span className="stat-num">{st.total}</span>
-                  <span className="xs muted">tasks · {st.percent}% done</span>
-                </div>
-                <div className="seg-bar" style={{ margin: '12px 0 14px' }}>
-                  <span style={{ flex: st.byStatus.DONE || 0.001, background: '#16a34a' }} />
-                  <span style={{ flex: st.byStatus.IN_PROGRESS || 0.001, background: '#ea580c' }} />
-                  <span style={{ flex: st.byStatus.TODO || 0.001, background: '#2563eb' }} />
-                </div>
-                {[
-                  ['DONE', '#16a34a'],
-                  ['IN_PROGRESS', '#ea580c'],
-                  ['TODO', '#2563eb'],
-                ].map(([s, c]) => (
-                  <div key={s} className="row sm" style={{ padding: '5px 0' }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 2, background: c }} />
-                    <span className="grow">{{ DONE: 'Done', IN_PROGRESS: 'In progress', TODO: 'To do' }[s]}</span>
-                    <span className="mono" style={{ width: 72, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {st.byStatus[s]} tasks
-                    </span>
-                    <span className="mono muted" style={{ width: 40, textAlign: 'right' }}>
-                      {pct(st.byStatus[s])}%
-                    </span>
+                <div className="status-pie">
+                  <StatusPie
+                    size={200}
+                    parts={[
+                      ['DONE', '#16a34a'],
+                      ['IN_REVIEW', '#9333ea'],
+                      ['IN_PROGRESS', '#ea580c'],
+                      ['TODO', '#2563eb'],
+                    ].map(([k, color]) => ({ value: st.byStatus[k], color }))}
+                    label={`${st.percent}%`}
+                  />
+                  <div className="legend">
+                    {[
+                      ['DONE', '#16a34a'],
+                      ['IN_REVIEW', '#9333ea'],
+                      ['IN_PROGRESS', '#ea580c'],
+                      ['TODO', '#2563eb'],
+                    ].map(([s, c]) => (
+                      <div key={s} className="row sm" style={{ padding: '5px 0' }}>
+                        <span style={{ width: 9, height: 9, borderRadius: 2, background: c }} />
+                        <span className="grow">
+                          {{ DONE: 'Done', IN_REVIEW: 'In review', IN_PROGRESS: 'In progress', TODO: 'To do' }[s]}
+                        </span>
+                        <span className="mono" style={{ width: 72, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {st.byStatus[s]} tasks
+                        </span>
+                        <span className="mono muted" style={{ width: 40, textAlign: 'right' }}>
+                          {pct(st.byStatus[s])}%
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
                 <div
                   className="divider"
                   style={{
@@ -341,8 +345,7 @@ export default function Overview() {
             </section>
           </div>
 
-          {/* Figma: baris bawah 60:40 (Needs attention lebih lebar dari Workload) */}
-          <div className="grid-2" style={{ marginTop: 14, gridTemplateColumns: '3fr 2fr' }}>
+          <div style={{ marginTop: 14 }}>
             <section className="card">
               <div className="card-head">
                 <span className="card-title">Needs attention</span>
@@ -389,35 +392,9 @@ export default function Overview() {
                 );
               })}
             </section>
-
-            <section className="card">
-              <div className="card-head">
-                <span className="card-title">Workload by assignee</span>
-                <span className="xs muted">Open tasks</span>
-              </div>
-              <div style={{ padding: '0 16px 14px' }}>
-                {o.workload.map((w) => {
-                  const max = Math.max(...o.workload.map((x) => x.openTasks), 1);
-                  return (
-                    <div key={w.user.id} className="row" style={{ padding: '7px 0' }}>
-                      <Avatar user={w.user} size={26} />
-                      <div className="grow">
-                        <div className="row-between sm">
-                          <span>
-                            <strong>{w.user.name}</strong> <span className="xs muted">{w.role}</span>
-                          </span>
-                          <span className="mono">{w.openTasks}</span>
-                        </div>
-                        <div className="progress" style={{ marginTop: 5 }}>
-                          <span style={{ width: `${(w.openTasks / max) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
           </div>
+
+          <MeetingAttendance meetings={meetings} projectId={projectId} />
         </>
       )}
       {creating && <TaskFormModal projectId={projectId} onClose={() => setCreating(false)} />}

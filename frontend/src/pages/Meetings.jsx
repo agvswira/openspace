@@ -1,21 +1,18 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
   CalendarDays,
   Clock,
   MapPin,
-  Plus,
   MoreHorizontal,
   Pencil,
   Trash2,
   Check,
-  ListChecks,
-  Calendar,
-  X,
+  UserCheck,
   ExternalLink,
 } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
-import { keys, projectTaskKeys, useApiMutation, useMeetings, useMembers } from '../api/hooks';
+import { keys, useApiMutation, useMeetings, useMembers } from '../api/hooks';
 import {
   Avatar,
   AvatarStack,
@@ -28,11 +25,75 @@ import {
   Menu,
   Modal,
 } from '../components/ui';
-import { StatusBadge } from '../lib/status';
-import { addDays, fmtLong, fmtShort, fromInputDate, startOfDay, toInputDate, MONTHS } from '../lib/format';
+import { addDays, fmtLong, fromInputDate, startOfDay, toInputDate, MONTHS } from '../lib/format';
 import { useCan } from '../components/tasks/TaskDetailPanel';
 import { useToast } from '../context/ToastContext';
 import { useMenuBinder } from '../components/ui/ContextMenu';
+
+// Status kehadiran peserta rapat. Present dan Late dihitung hadir.
+const ATTENDANCE = [
+  { key: 'PRESENT', label: 'Present', tone: 'DONE' },
+  { key: 'LATE', label: 'Late', tone: 'IN_PROGRESS' },
+  { key: 'EXCUSED', label: 'Excused', tone: 'TODO' },
+  { key: 'ABSENT', label: 'Absent', tone: 'OVERDUE' },
+];
+const attended = (m) => m.participants.filter((p) => p.attendance === 'PRESENT' || p.attendance === 'LATE').length;
+const recorded = (m) => m.participants.filter((p) => p.attendance).length;
+
+// Pilih peserta: semua anggota sekaligus, per role, atau satu per satu.
+function AttendeePicker({ members, value, onChange }) {
+  const ids = members.map((m) => m.user.id);
+  const roles = [...new Set(members.map((m) => m.role.name))];
+  const allSelected = ids.length > 0 && ids.every((id) => value.includes(id));
+  const roleIds = (role) => members.filter((m) => m.role.name === role).map((m) => m.user.id);
+  const roleSelected = (role) => roleIds(role).every((id) => value.includes(id));
+  const toggleRole = (role) => {
+    const r = roleIds(role);
+    onChange(roleSelected(role) ? value.filter((id) => !r.includes(id)) : [...new Set([...value, ...r])]);
+  };
+  const toggle = (id) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+
+  return (
+    <div className="attendee-picker">
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+        <button
+          type="button"
+          className={`chip ${allSelected ? 'active' : ''}`}
+          aria-pressed={allSelected}
+          onClick={() => onChange(allSelected ? [] : ids)}
+        >
+          {allSelected ? <Check size={13} /> : null}
+          Select all members
+        </button>
+        {roles.map((role) => (
+          <button
+            type="button"
+            key={role}
+            className={`chip ${roleSelected(role) ? 'active' : ''}`}
+            aria-pressed={roleSelected(role)}
+            onClick={() => toggleRole(role)}
+          >
+            {roleSelected(role) ? <Check size={13} /> : null}
+            {role}
+          </button>
+        ))}
+        <span className="xs muted" style={{ marginLeft: 'auto' }}>
+          {value.length} of {ids.length} selected
+        </span>
+      </div>
+      <div className="attendee-list">
+        {members.map((m) => (
+          <label key={m.user.id} className="check attendee-item">
+            <input type="checkbox" checked={value.includes(m.user.id)} onChange={() => toggle(m.user.id)} />
+            <Avatar user={m.user} size={22} />
+            <span className="grow sm">{m.user.name}</span>
+            <span className="xs muted">{m.role.name}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function MeetingFormModal({ projectId, meeting, onClose, onSaved }) {
   const { data: members } = useMembers(projectId);
@@ -75,18 +136,11 @@ function MeetingFormModal({ projectId, meeting, onClose, onSaved }) {
       notes: form.notes || null,
     });
   };
-  const toggle = (id) =>
-    setForm((f) => ({
-      ...f,
-      participantIds: f.participantIds.includes(id)
-        ? f.participantIds.filter((x) => x !== id)
-        : [...f.participantIds, id],
-    }));
 
   return (
     <Modal
       title={meeting ? 'Edit meeting' : 'New meeting'}
-      subtitle="Meetings are recorded manually: notes, attendees and action items."
+      subtitle="Record the meeting, who should attend, and notes. Attendance is tracked after the meeting."
       onClose={onClose}
       footer={
         <>
@@ -130,23 +184,15 @@ function MeetingFormModal({ projectId, meeting, onClose, onSaved }) {
             placeholder="Google Meet, Ruang rapat…"
           />
         </Field>
-        <Field label="Attendees">
-          <div className="row" style={{ flexWrap: 'wrap' }}>
-            {members?.members.map((m) => (
-              <button
-                type="button"
-                key={m.id}
-                className={`chip ${form.participantIds.includes(m.user.id) ? 'active' : ''}`}
-                onClick={() => toggle(m.user.id)}
-                aria-pressed={form.participantIds.includes(m.user.id)}
-              >
-                {m.user.name}
-              </button>
-            ))}
-          </div>
-        </Field>
-        <Field label="Notes" hint="One point per line." htmlFor="mt-notes">
+        <Field label="Notes" hint="Each line becomes one bullet point in the meeting notes." htmlFor="mt-notes">
           <textarea id="mt-notes" className="textarea" value={form.notes} onChange={set('notes')} />
+        </Field>
+        <Field label="Attendees">
+          <AttendeePicker
+            members={members?.members ?? []}
+            value={form.participantIds}
+            onChange={(participantIds) => setForm((f) => ({ ...f, participantIds }))}
+          />
         </Field>
         <FormError message={err || (save.error && errorMessage(save.error))} />
       </form>
@@ -155,241 +201,192 @@ function MeetingFormModal({ projectId, meeting, onClose, onSaved }) {
 }
 
 function MeetingDetail({ m, projectId, can, onEdit, onDelete }) {
-  const navigate = useNavigate();
   const toast = useToast();
   const { data: members } = useMembers(projectId);
-  const [item, setItem] = useState({ title: '', assigneeId: '', dueDate: '' });
-  const [showAdd, setShowAdd] = useState(false);
   const [rejected, setRejected] = useState(null);
-  const inv = [...projectTaskKeys(projectId), keys.meetings(projectId)];
-  const addItem = useApiMutation((b) => api.post(`/meetings/${m.id}/action-items`, b), {
-    invalidate: inv,
-    onSuccess: () => setItem({ title: '', assigneeId: '', dueDate: '' }),
-  });
-  const delItem = useApiMutation((id) => api.delete(`/meetings/${m.id}/action-items/${id}`), { invalidate: inv });
-  // FR-12: action item -> tugas, tetap terhubung ke rapat asal.
-  const convert = useApiMutation((id) => api.post(`/meetings/${m.id}/action-items/${id}/convert`).then((r) => r.data), {
-    invalidate: inv,
-    onSuccess: (t) => toast(`Tugas "${t.title}" dibuat dari rapat`),
-  });
   const canMeet = can('MANAGE_MEETINGS');
-  const canConvert = canMeet && can('CREATE_TASKS');
-  const doneCount = m.actionItems.filter((a) => a.task?.status === 'DONE').length;
+  const mark = useApiMutation((entries) => api.put(`/meetings/${m.id}/attendance`, { entries }), {
+    invalidate: [keys.meetings(projectId)],
+  });
+  const setAttendance = (entries, message) =>
+    mark.mutate(entries, {
+      onSuccess: () => message && toast(message),
+      onError: (e) => setRejected(errorMessage(e)),
+    });
+  const counts = Object.fromEntries(
+    ATTENDANCE.map((a) => [a.key, m.participants.filter((p) => p.attendance === a.key).length]),
+  );
+  const notRecorded = m.participants.length - recorded(m);
+  // Peserta dikelompokkan per role, urutan role mengikuti daftar anggota proyek.
+  const roleOf = (id) => members?.members.find((x) => x.user.id === id)?.role.name ?? 'Other';
+  const roleOrder = [...new Set([...(members?.members ?? []).map((x) => x.role.name), 'Other'])];
+  const groups = roleOrder
+    .map((role) => ({ role, people: m.participants.filter((p) => roleOf(p.id) === role) }))
+    .filter((g) => g.people.length);
 
   return (
-    <section className="card card-pad" style={{ alignSelf: 'start' }}>
-      <div className="row-between">
-        <h2 style={{ fontSize: 20, fontWeight: 600 }}>{m.title}</h2>
-        {canMeet && (
-          <div className="row">
-            <button className="btn btn-sm" onClick={() => onEdit(m)}>
-              <Pencil size={13} />
-              Edit
-            </button>
-            <Menu
-              trigger={({ toggle }) => (
-                <button className="icon-btn" onClick={toggle} aria-label="Menu rapat">
-                  <MoreHorizontal size={16} />
-                </button>
-              )}
-            >
-              <button className="menu-item danger" onClick={() => onDelete(m)}>
-                <Trash2 size={14} />
-                Delete meeting
+    <div className="meeting-detail">
+      <section className="card card-pad">
+        <div className="row-between">
+          <h2 style={{ fontSize: 20, fontWeight: 600 }}>{m.title}</h2>
+          {canMeet && (
+            <div className="row">
+              <button className="btn btn-sm" onClick={() => onEdit(m)}>
+                <Pencil size={13} />
+                Edit
               </button>
-            </Menu>
-          </div>
-        )}
-      </div>
-      <div className="row sm muted" style={{ gap: 14, marginTop: 6 }}>
-        <span className="row" style={{ gap: 5 }}>
-          <CalendarDays size={14} />
-          {new Date(m.date).toLocaleDateString('en-GB', {
-            weekday: 'short',
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-          })}
-        </span>
-        <span className="row mono" style={{ gap: 5 }}>
-          <Clock size={14} />
-          {m.startTime} – {m.endTime}
-        </span>
-        {m.location && (
-          <span className="row" style={{ gap: 5 }}>
-            <MapPin size={14} />
-            {m.location}
-          </span>
-        )}
-      </div>
-
-      <div className="section-title" style={{ marginTop: 18 }}>
-        Attendees
-      </div>
-      <div className="row" style={{ flexWrap: 'wrap', gap: 16 }}>
-        {m.participants.map((p) => {
-          const role = members?.members.find((x) => x.user.id === p.id)?.role.name;
-          return (
-            <span key={p.id} className="row">
-              <Avatar user={p} size={28} />
-              <span>
-                <span className="sm" style={{ display: 'block', fontWeight: 500 }}>
-                  {p.name}
-                </span>
-                <span className="xs muted">{role}</span>
-              </span>
-            </span>
-          );
-        })}
-        {!m.participants.length && <span className="sm faint">No attendees recorded.</span>}
-      </div>
-
-      <div className="section-title" style={{ marginTop: 18 }}>
-        Notes
-      </div>
-      <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
-        {m.notes ? (
-          <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }} className="sm">
-            {m.notes
-              .split('\n')
-              .filter(Boolean)
-              .map((line, i) => (
-                <li key={i}>{line.replace(/^[-•]\s*/, '')}</li>
-              ))}
-          </ul>
-        ) : (
-          <span className="sm faint">No notes.</span>
-        )}
-      </div>
-
-      <div className="row-between" style={{ marginTop: 18, marginBottom: 8 }}>
-        <span className="section-title" style={{ margin: 0 }}>
-          Action items
-        </span>
-        <span className="badge mono" style={{ background: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
-          {doneCount} / {m.actionItems.length} done
-        </span>
-      </div>
-      <div className="card">
-        {m.actionItems.map((a) => (
-          <div key={a.id} className="list-row">
-            <span className={`task-check ${a.task?.status === 'DONE' ? 'checked' : ''}`} aria-hidden>
-              {a.task?.status === 'DONE' && <Check size={12} strokeWidth={3} />}
-            </span>
-            <span className="grow sm" style={{ fontWeight: 500 }}>
-              {a.title}
-            </span>
-            {a.assignee && <Avatar user={a.assignee} size={22} />}
-            <span className="mono muted row" style={{ width: 70, gap: 4 }}>
-              <Calendar size={12} />
-              {a.dueDate ? fmtShort(a.dueDate) : '—'}
-            </span>
-            <span style={{ width: 120, display: 'flex', justifyContent: 'flex-end' }}>
-              {a.task ? (
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => navigate(`/projects/${projectId}/tasks?task=${a.task.id}`)}
-                  title="Buka tugas"
-                >
-                  <StatusBadge status={a.task.status} plain />
-                </button>
-              ) : canConvert ? (
-                <button
-                  className="btn btn-sm"
-                  disabled={convert.isPending}
-                  onClick={() => convert.mutate(a.id, { onError: (e) => setRejected(errorMessage(e)) })}
-                >
-                  <Plus size={12} />
-                  Make task
-                </button>
-              ) : (
-                <span className="xs faint">Not a task yet</span>
-              )}
-            </span>
-            {canMeet && !a.task && (
-              <button
-                className="icon-btn"
-                style={{ width: 24, height: 24 }}
-                aria-label={`Hapus ${a.title}`}
-                onClick={() => delItem.mutate(a.id)}
+              <Menu
+                trigger={({ toggle }) => (
+                  <button className="icon-btn" onClick={toggle} aria-label="Menu rapat">
+                    <MoreHorizontal size={16} />
+                  </button>
+                )}
               >
-                <X size={13} />
+                <button className="menu-item danger" onClick={() => onDelete(m)}>
+                  <Trash2 size={14} />
+                  Delete meeting
+                </button>
+              </Menu>
+            </div>
+          )}
+        </div>
+        <div className="row sm muted" style={{ gap: 14, marginTop: 6 }}>
+          <span className="row" style={{ gap: 5 }}>
+            <CalendarDays size={14} />
+            {new Date(m.date).toLocaleDateString('en-GB', {
+              weekday: 'short',
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </span>
+          <span className="row mono" style={{ gap: 5 }}>
+            <Clock size={14} />
+            {m.startTime} – {m.endTime}
+          </span>
+          {m.location && (
+            <span className="row" style={{ gap: 5 }}>
+              <MapPin size={14} />
+              {m.location}
+            </span>
+          )}
+        </div>
+
+        <div className="section-title" style={{ marginTop: 18 }}>
+          Notes
+        </div>
+        <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+          {m.notes ? (
+            <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }} className="sm">
+              {m.notes
+                .split('\n')
+                .filter(Boolean)
+                .map((line, i) => (
+                  <li key={i}>{line.replace(/^[-•]\s*/, '')}</li>
+                ))}
+            </ul>
+          ) : (
+            <span className="sm faint">No notes.</span>
+          )}
+        </div>
+      </section>
+
+      {/* Kehadiran dipisah ke kotak sendiri agar tidak bercampur dengan catatan rapat. */}
+      <section className="card card-pad">
+        <div className="row-between" style={{ marginBottom: 8 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Attendance</h2>
+          <div className="row" style={{ gap: 8 }}>
+            <span className="badge mono" style={{ background: 'var(--bg-muted)', color: 'var(--text-muted)' }}>
+              {attended(m)} / {m.participants.length} attended
+            </span>
+            {canMeet && m.participants.length > 0 && (
+              <button
+                className="btn btn-sm"
+                disabled={mark.isPending}
+                onClick={() =>
+                  setAttendance(
+                    m.participants.map((p) => ({ userId: p.id, attendance: 'PRESENT' })),
+                    'Semua peserta ditandai hadir',
+                  )
+                }
+              >
+                <UserCheck size={13} />
+                Mark all present
               </button>
             )}
           </div>
-        ))}
-        {!m.actionItems.length && (
-          <p className="sm faint" style={{ padding: 14 }}>
-            Belum ada action item.
-          </p>
-        )}
-      </div>
-      {canMeet && !showAdd && (
-        <button
-          className="link sm row"
-          style={{ marginTop: 12, color: 'var(--text-muted)', gap: 6, fontWeight: 400 }}
-          onClick={() => setShowAdd(true)}
-        >
-          <Plus size={14} />
-          Add action item as task
-        </button>
-      )}
-      {canMeet && showAdd && (
-        <form
-          className="row"
-          style={{ marginTop: 10, flexWrap: 'wrap' }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (item.title.trim().length >= 2)
-              addItem.mutate({
-                title: item.title.trim(),
-                assigneeId: item.assigneeId || null,
-                dueDate: fromInputDate(item.dueDate),
-              });
-          }}
-        >
-          <input
-            className="input grow"
-            placeholder="Add action item"
-            value={item.title}
-            onChange={(e) => setItem({ ...item, title: e.target.value })}
-            aria-label="Action item baru"
-          />
-          <select
-            className="select"
-            style={{ width: 140 }}
-            value={item.assigneeId}
-            onChange={(e) => setItem({ ...item, assigneeId: e.target.value })}
-            aria-label="Penanggung jawab"
-          >
-            <option value="">Assignee</option>
-            {members?.members.map((x) => (
-              <option key={x.user.id} value={x.user.id}>
-                {x.user.name}
-              </option>
+        </div>
+        {m.participants.length > 0 && (
+          <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {ATTENDANCE.map((a) => (
+              <span key={a.key} className={`att-pill att-${a.key}`}>
+                {a.label} <strong>{counts[a.key]}</strong>
+              </span>
             ))}
-          </select>
-          <input
-            type="date"
-            className="input"
-            style={{ width: 150 }}
-            value={item.dueDate}
-            onChange={(e) => setItem({ ...item, dueDate: e.target.value })}
-            aria-label="Deadline"
-          />
-          <button className="btn" disabled={addItem.isPending || item.title.trim().length < 2}>
-            <Plus size={14} />
-            Add
-          </button>
-          <button type="button" className="icon-btn" aria-label="Batal" onClick={() => setShowAdd(false)}>
-            <X size={14} />
-          </button>
-        </form>
-      )}
-      {rejected && (
-        <ConfirmDialog title="Tidak dapat membuat tugas" message={rejected} onClose={() => setRejected(null)} />
-      )}
-    </section>
+            <span className="att-pill att-NONE">
+              Not recorded <strong>{notRecorded}</strong>
+            </span>
+          </div>
+        )}
+        {!m.participants.length && (
+          <div className="card">
+            <p className="sm faint" style={{ padding: 14 }}>
+              Belum ada peserta. Tambahkan peserta lewat Edit.
+            </p>
+          </div>
+        )}
+        <div className="att-groups">
+          {groups.map((g) => (
+            <div key={g.role} className="card att-group">
+              <div className="att-group-head">
+                <strong className="sm">{g.role}</strong>
+                <span className="xs muted mono">
+                  {attended({ participants: g.people })}/{g.people.length} attended
+                </span>
+              </div>
+              {g.people.map((p) => {
+                const current = ATTENDANCE.find((x) => x.key === p.attendance);
+                return (
+                  <div key={p.id} className="list-row attendance-row">
+                    <Avatar user={p} size={28} />
+                    <span className="grow sm" style={{ minWidth: 0, fontWeight: 500 }}>
+                      {p.name}
+                    </span>
+                    {canMeet ? (
+                      <div className="att-seg" role="group" aria-label={`Kehadiran ${p.name}`}>
+                        {ATTENDANCE.map((a) => {
+                          const on = p.attendance === a.key;
+                          return (
+                            <button
+                              key={a.key}
+                              type="button"
+                              className={`att-${a.key} ${on ? 'on' : ''}`}
+                              aria-pressed={on}
+                              disabled={mark.isPending}
+                              onClick={() => setAttendance([{ userId: p.id, attendance: on ? null : a.key }])}
+                            >
+                              {a.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : current ? (
+                      <span className={`att-pill att-${current.key} on`}>{current.label}</span>
+                    ) : (
+                      <span className="att-pill att-NONE">Not recorded</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {rejected && (
+          <ConfirmDialog title="Kehadiran tidak tersimpan" message={rejected} onClose={() => setRejected(null)} />
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -429,7 +426,7 @@ export default function Meetings() {
       <div className="page-head">
         <div>
           <h1 className="page-title">Meetings</h1>
-          <p className="page-sub">Notes, decisions and action items from team meetings</p>
+          <p className="page-sub">Notes and attendance from team meetings</p>
         </div>
         {can('MANAGE_MEETINGS') && (
           <button className="btn btn-primary" onClick={() => setEditing('new')}>
@@ -445,7 +442,7 @@ export default function Meetings() {
       ) : !list.length ? (
         <div className="card">
           <EmptyState icon={CalendarDays} title="Belum ada rapat">
-            Catat rapat tim beserta peserta, catatan, dan action item yang dapat dijadikan tugas.
+            Catat rapat tim beserta peserta, catatan, dan kehadiran setiap anggota.
           </EmptyState>
         </div>
       ) : (
@@ -519,11 +516,10 @@ export default function Meetings() {
                           </span>
                           <span className="row xs muted" style={{ marginTop: 4 }}>
                             <AvatarStack users={m.participants} size={18} max={3} />
-                            {m.actionItems.length > 0 ? (
+                            {recorded(m) > 0 ? (
                               <span className="row" style={{ gap: 4 }}>
-                                <ListChecks size={12} />
-                                {m.actionItems.filter((a) => a.task?.status === 'DONE').length}/{m.actionItems.length}{' '}
-                                action items
+                                <UserCheck size={12} />
+                                {attended(m)}/{m.participants.length} attended
                               </span>
                             ) : startOfDay(m.date) > today ? (
                               'Upcoming'
@@ -566,7 +562,7 @@ export default function Meetings() {
           confirmLabel="Delete"
           busy={del.isPending}
           error={del.error && errorMessage(del.error)}
-          message={`"${deleting.title}" and its notes will be deleted.`}
+          message={`"${deleting.title}", its notes and attendance will be deleted.`}
           onConfirm={() => del.mutate(deleting.id)}
           onClose={() => {
             setDeleting(null);
