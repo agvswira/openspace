@@ -2906,7 +2906,7 @@ html.theme-anim *::after {
     display: none;
   }
   .contrib-row {
-    grid-template-columns: minmax(150px, 2fr) repeat(3, minmax(60px, 1fr)) minmax(120px, 1.8fr) minmax(80px, 1fr);
+    grid-template-columns: minmax(150px, 2fr) repeat(3, minmax(76px, 1fr)) minmax(120px, 1.8fr) minmax(80px, 1fr);
     gap: 10px;
     padding: 12px 14px;
   }
@@ -2916,7 +2916,7 @@ html.theme-anim *::after {
     display: none;
   }
   .contrib-row {
-    grid-template-columns: minmax(0, 1.6fr) 58px 40px minmax(72px, 1fr);
+    grid-template-columns: minmax(0, 1.4fr) 76px 52px minmax(72px, 1fr);
     gap: 8px;
     padding: 10px 12px;
   }

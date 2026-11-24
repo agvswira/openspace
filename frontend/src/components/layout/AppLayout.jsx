@@ -29,7 +29,7 @@ import SearchDialog from './SearchDialog';
 import NotificationsMenu from './NotificationsMenu';
 import NewProjectModal from './NewProjectModal';
 import InviteModal from '../InviteModal';
-import { ThemeSwitcher, ThemeToggleButton } from '../ThemeSwitcher';
+import { ThemeToggleButton } from '../ThemeSwitcher';
 import { useMenuBinder } from '../ui/ContextMenu';
 import { useProjectMenu } from './projectMenu';
 
@@ -160,10 +160,6 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
             <Settings size={14} />
             Profile & preferences
           </Link>
-          <div className="menu-label">Theme</div>
-          <div style={{ padding: '0 6px 6px' }}>
-            <ThemeSwitcher />
-          </div>
           <button
             className="menu-item danger"
             onClick={() => {
@@ -206,7 +202,7 @@ function Topbar({ onMenu }) {
       </>
     );
   } else {
-    const page = { '/my-tasks': 'My tasks', '/settings': 'Workspace settings' }[location.pathname];
+    const page = { '/my-tasks': 'My tasks', '/settings': 'Settings' }[location.pathname];
     crumbs = (
       <>
         <span>Workspace</span>

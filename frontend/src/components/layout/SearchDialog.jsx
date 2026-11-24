@@ -44,7 +44,7 @@ export default function SearchDialog({ onClose }) {
   const pages = [
     { label: 'Home', to: '/' },
     { label: 'My tasks', to: '/my-tasks' },
-    { label: 'Workspace settings', to: '/settings' },
+    { label: 'Settings', to: '/settings' },
   ].filter((p) => q && p.label.toLowerCase().includes(q.toLowerCase()));
   const empty = res && !res.tasks.length && !res.milestones.length && !res.projects.length && !pages.length;
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Lock, Archive, Trash2, ArchiveRestore, Check, ChevronDown, Users, Upload } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
@@ -15,6 +15,7 @@ import {
 } from '../components/ui';
 import { toAvatarDataUrl } from '../lib/image';
 import { ThemeSwitcher } from '../components/ThemeSwitcher';
+import { LANGUAGES, LANG_EVENT, getLang, setLang } from '../i18n';
 import { PROJECT_COLORS } from '../components/layout/NewProjectModal';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -323,9 +324,13 @@ export function WorkspaceSettings() {
   const { data: archived = [] } = useProjects(true);
   const [ws, setWs] = useState(workspace?.name ?? '');
   const [profile, setProfile] = useState({ name: user.name, email: user.email, title: user.title ?? '' });
-  const [currentPassword, setCurrentPassword] = useState('');
-  const emailChanged = profile.email.trim().toLowerCase() !== user.email;
   const [prefs, setPrefs] = useState(user.preferences);
+  const [lang, setLangState] = useState(getLang);
+  useEffect(() => {
+    const onChange = (e) => setLangState(e.detail);
+    window.addEventListener(LANG_EVENT, onChange);
+    return () => window.removeEventListener(LANG_EVENT, onChange);
+  }, []);
   const saveWs = useApiMutation((name) => api.patch(`/workspaces/${workspace.id}`, { name }), {
     onSuccess: () => {
       reload();
@@ -366,7 +371,7 @@ export function WorkspaceSettings() {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1 className="page-title">Workspace settings</h1>
+          <h1 className="page-title">Settings</h1>
           <p className="page-sub">Your workspace, profile and notification preferences</p>
         </div>
       </div>
@@ -402,10 +407,7 @@ export function WorkspaceSettings() {
         className="settings-section"
         onSubmit={(e) => {
           e.preventDefault();
-          saveProfile.mutate(
-            { ...profile, title: profile.title || null, ...(emailChanged && { currentPassword }) },
-            { onSuccess: () => setCurrentPassword('') },
-          );
+          saveProfile.mutate({ ...profile, title: profile.title || null });
         }}
       >
         <div>
@@ -477,18 +479,6 @@ export function WorkspaceSettings() {
               onChange={(e) => setProfile({ ...profile, email: e.target.value })}
             />
           </Field>
-          {emailChanged && (
-            <Field label="Current password" htmlFor="pf-current-password" hint="Required to change your email.">
-              <input
-                id="pf-current-password"
-                type="password"
-                className="input"
-                autoComplete="current-password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
-            </Field>
-          )}
           <FormError message={saveProfile.error && errorMessage(saveProfile.error)} />
           <div style={{ textAlign: 'right' }}>
             <button className="btn btn-primary" disabled={saveProfile.isPending}>
@@ -514,6 +504,40 @@ export function WorkspaceSettings() {
               <div className="xs muted">Saved on this device.</div>
             </div>
             <ThemeSwitcher />
+          </div>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div>
+          <h3 className="card-title">Language</h3>
+          <p className="sm muted" style={{ marginTop: 4 }}>
+            Choose the language of the interface.
+          </p>
+        </div>
+        <div className="card">
+          <div className="perm-row">
+            <div>
+              <div className="sm" style={{ fontWeight: 500 }}>
+                Interface language
+              </div>
+              <div className="xs muted">Saved on this device.</div>
+            </div>
+            {/* Nama bahasa tidak ikut diterjemahkan agar selalu dikenali */}
+            <select
+              className="select"
+              style={{ width: 200 }}
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              aria-label="Language / Bahasa"
+              data-i18n-skip
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </section>

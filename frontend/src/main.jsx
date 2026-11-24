@@ -9,6 +9,7 @@ import { ContextMenuProvider } from './components/ui/ContextMenu';
 import App from './App';
 import { api } from './api/client';
 import { DEMO_BASE, IS_DEMO, installDemo } from './demo/demoMode';
+import { startTranslation } from './i18n';
 import './styles.css';
 
 // React Query menyimpan data server di cache client dan memuat ulang setelah mutasi.
@@ -51,6 +52,9 @@ router.navigate = (to, opts) => {
 };
 
 // Mode demo memasang adapter data contoh dulu (fixture dimuat terpisah, hanya untuk /demo).
+// Bahasa Indonesia: teks antarmuka diterjemahkan saat tampil (lihat i18n/index.js).
+startTranslation();
+
 (IS_DEMO ? installDemo(api) : Promise.resolve()).then(() =>
   createRoot(document.getElementById('root')).render(
     <StrictMode>
