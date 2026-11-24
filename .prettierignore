@@ -3,4 +3,3 @@ dist
 backend/.pgdata
 package-lock.json
 **/migrations/**/*.sql
-frontend/src/demo/fixtures.json

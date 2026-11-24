@@ -173,14 +173,10 @@ export default function Members() {
         }}
       >
         <div>
-          <search className="row" style={{ marginBottom: 12 }}>
+          <div className="row" style={{ marginBottom: 12 }}>
             <div className="input-icon" style={{ flex: 1, maxWidth: 260, minWidth: 0 }}>
-              <Search size={14} aria-hidden="true" />
+              <Search size={14} />
               <input
-                type="search"
-                name="member-search"
-                spellCheck={false}
-                enterKeyHint="search"
                 className="input"
                 placeholder="Search by name or email..."
                 value={q}
@@ -192,160 +188,153 @@ export default function Members() {
               align="left"
               width={200}
               trigger={({ toggle }) => (
-                <button type="button" className="btn" onClick={toggle} aria-label="Filter role">
+                <button className="btn" onClick={toggle} aria-label="Filter role">
                   <SlidersHorizontal size={14} />
                   {roles.find((r) => r.id === roleFilter)?.name ?? 'All roles'}
                 </button>
               )}
             >
-              <button type="button" className="menu-item" onClick={() => setRoleFilter('')}>
+              <button className="menu-item" onClick={() => setRoleFilter('')}>
                 All roles
               </button>
               {roles.map((r) => (
-                <button type="button" key={r.id} className="menu-item" onClick={() => setRoleFilter(r.id)}>
+                <button key={r.id} className="menu-item" onClick={() => setRoleFilter(r.id)}>
                   {r.name}
                 </button>
               ))}
             </Menu>
-          </search>
+          </div>
           <div className="card" style={{ overflow: 'hidden' }}>
-            <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="members-table-caption">
-              <table className="table">
-                <caption id="members-table-caption" className="sr-only">
-                  Daftar anggota proyek
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Member</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">Open tasks</th>
-                    <th scope="col">Last active</th>
-                    <th scope="col" style={{ width: 40 }}>
-                      <span className="sr-only">Aksi</span>
-                    </th>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Role</th>
+                  <th>Open tasks</th>
+                  <th>Last active</th>
+                  <th style={{ width: 40 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <tr
+                    key={m.id}
+                    {...bindMenu(() => [
+                      {
+                        label: 'Copy email',
+                        icon: Mail,
+                        onSelect: () => navigator.clipboard?.writeText(m.user.email),
+                      },
+                      {
+                        label: 'Make owner',
+                        icon: Shield,
+                        disabled: !isOwner || m.role.isOwner,
+                        hint: m.role.isOwner
+                          ? 'Sudah menjadi Owner.'
+                          : 'Hanya Owner yang dapat mengalihkan kepemilikan.',
+                        onSelect: () => setTransfer(m),
+                      },
+                      { separator: true },
+                      {
+                        label: 'Remove from project',
+                        icon: UserMinus,
+                        danger: true,
+                        disabled: !isOwner || m.role.isOwner,
+                        hint: m.role.isOwner
+                          ? 'Owner tidak dapat dikeluarkan.'
+                          : 'Hanya Owner yang dapat mengeluarkan anggota.',
+                        onSelect: () => setRemoving(m),
+                      },
+                    ])}
+                  >
+                    <td>
+                      <div className="row">
+                        <Avatar user={m.user} size={32} />
+                        <div>
+                          <div style={{ fontWeight: 500 }}>
+                            {m.user.name} {m.user.id === user.id && <span className="xs muted">You</span>}
+                          </div>
+                          <div className="xs muted">{m.user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {m.role.isOwner || !isOwner ? (
+                        <span className={`badge ${m.role.isOwner ? 'bg-TODO st-TODO' : ''}`}>
+                          {m.role.isOwner && <Shield size={12} />}
+                          {m.role.name}
+                        </span>
+                      ) : (
+                        <span className="row" style={{ gap: 2 }}>
+                          <Users size={14} className="muted" />
+                          <select
+                            className="inline-select"
+                            value={m.role.id}
+                            onChange={(e) => changeRole.mutate({ id: m.id, roleId: e.target.value })}
+                            aria-label={`Role ${m.user.name}`}
+                          >
+                            {roles
+                              .filter((r) => !r.isOwner)
+                              .map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name}
+                                </option>
+                              ))}
+                          </select>
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ width: '26%' }}>
+                      <div className="row">
+                        <span className="mono" style={{ width: 16 }}>
+                          {m.openTasks}
+                        </span>
+                        <div className="progress grow">
+                          <span style={{ width: `${(m.openTasks / maxOpen) * 100}%` }} />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="sm">
+                      {m.isOnline ? (
+                        <span className="st-DONE">● Online</span>
+                      ) : (
+                        <span className="muted">{timeAgo(m.lastActiveAt)}</span>
+                      )}
+                    </td>
+                    <td>
+                      {m.role.isOwner ? (
+                        <Lock size={14} className="faint" aria-label="Owner tidak dapat dikeluarkan" />
+                      ) : (
+                        isOwner && (
+                          <Menu
+                            trigger={({ toggle }) => (
+                              <button className="icon-btn" onClick={toggle} aria-label={`Menu ${m.user.name}`}>
+                                <MoreHorizontal size={16} />
+                              </button>
+                            )}
+                          >
+                            <button className="menu-item" onClick={() => setTransfer(m)}>
+                              <Shield size={14} />
+                              Make owner
+                            </button>
+                            <button className="menu-item danger" onClick={() => setRemoving(m)}>
+                              Remove from project
+                            </button>
+                          </Menu>
+                        )
+                      )}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {members.map((m) => (
-                    <tr
-                      key={m.id}
-                      {...bindMenu(() => [
-                        {
-                          label: 'Copy email',
-                          icon: Mail,
-                          onSelect: () => navigator.clipboard?.writeText(m.user.email),
-                        },
-                        {
-                          label: 'Make owner',
-                          icon: Shield,
-                          disabled: !isOwner || m.role.isOwner,
-                          hint: m.role.isOwner
-                            ? 'Sudah menjadi Owner.'
-                            : 'Hanya Owner yang dapat mengalihkan kepemilikan.',
-                          onSelect: () => setTransfer(m),
-                        },
-                        { separator: true },
-                        {
-                          label: 'Remove from project',
-                          icon: UserMinus,
-                          danger: true,
-                          disabled: !isOwner || m.role.isOwner,
-                          hint: m.role.isOwner
-                            ? 'Owner tidak dapat dikeluarkan.'
-                            : 'Hanya Owner yang dapat mengeluarkan anggota.',
-                          onSelect: () => setRemoving(m),
-                        },
-                      ])}
-                    >
-                      <td>
-                        <div className="row">
-                          <Avatar user={m.user} size={32} />
-                          <div>
-                            <div style={{ fontWeight: 500 }}>
-                              {m.user.name} {m.user.id === user.id && <span className="xs muted">You</span>}
-                            </div>
-                            <div className="xs muted">{m.user.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        {m.role.isOwner || !isOwner ? (
-                          <span className={`badge ${m.role.isOwner ? 'bg-TODO st-TODO' : ''}`}>
-                            {m.role.isOwner && <Shield size={12} />}
-                            {m.role.name}
-                          </span>
-                        ) : (
-                          <span className="row" style={{ gap: 2 }}>
-                            <Users size={14} className="muted" />
-                            <select
-                              className="inline-select"
-                              value={m.role.id}
-                              onChange={(e) => changeRole.mutate({ id: m.id, roleId: e.target.value })}
-                              aria-label={`Role ${m.user.name}`}
-                            >
-                              {roles
-                                .filter((r) => !r.isOwner)
-                                .map((r) => (
-                                  <option key={r.id} value={r.id}>
-                                    {r.name}
-                                  </option>
-                                ))}
-                            </select>
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ width: '26%' }}>
-                        <div className="row">
-                          <span className="mono" style={{ width: 16 }}>
-                            {m.openTasks}
-                          </span>
-                          <div className="progress grow">
-                            <span style={{ width: `${(m.openTasks / maxOpen) * 100}%` }} />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="sm">
-                        {m.isOnline ? (
-                          <span className="st-DONE">● Online</span>
-                        ) : (
-                          <span className="muted">{timeAgo(m.lastActiveAt)}</span>
-                        )}
-                      </td>
-                      <td>
-                        {m.role.isOwner ? (
-                          <Lock size={14} className="faint" role="img" aria-label="Owner tidak dapat dikeluarkan" />
-                        ) : (
-                          isOwner && (
-                            <Menu
-                              trigger={({ toggle }) => (
-                                <button className="icon-btn" onClick={toggle} aria-label={`Menu ${m.user.name}`}>
-                                  <MoreHorizontal size={16} />
-                                </button>
-                              )}
-                            >
-                              <button className="menu-item" onClick={() => setTransfer(m)}>
-                                <Shield size={14} />
-                                Make owner
-                              </button>
-                              <button className="menu-item danger" onClick={() => setRemoving(m)}>
-                                Remove from project
-                              </button>
-                            </Menu>
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
           <FormError message={changeRole.error && errorMessage(changeRole.error)} />
         </div>
 
         <aside className="card">
           <div className="card-head">
-            <h2 className="card-title">Roles</h2>
+            <span className="card-title">Roles</span>
             <Link to={`/projects/${projectId}/roles`} className="btn btn-sm">
               <Settings2 size={13} />
               Manage

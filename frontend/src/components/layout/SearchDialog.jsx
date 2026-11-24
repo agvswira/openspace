@@ -1,40 +1,33 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Flag, FileText, X } from 'lucide-react';
-import { api, errorMessage } from '../../api/client';
+import { Search, Flag, FileText } from 'lucide-react';
+import { api } from '../../api/client';
 import { StatusIcon, displayState } from '../../lib/status';
-import { FormError, ProjectMark, useModalDialog } from '../ui';
+import { ProjectMark } from '../ui';
 
 // FR-16: pencarian tugas, milestone, dan halaman (Ctrl+K).
 export default function SearchDialog({ onClose }) {
   const [q, setQ] = useState('');
   // Hasil disimpan bersama kata kuncinya; respons lama yang datang terlambat otomatis diabaikan.
-  const [found, setFound] = useState(null);
+  const [found, setFound] = useState({ q: '', data: null });
   const navigate = useNavigate();
-  const { dialogRef, requestClose } = useModalDialog(onClose);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   useEffect(() => {
     if (q.trim().length < 2) return undefined;
-    const request = new AbortController();
-    const id = setTimeout(async () => {
-      try {
-        const { data } = await api.get('/search', { params: { q }, signal: request.signal });
-        if (!request.signal.aborted) setFound({ q, data });
-      } catch (error) {
-        if (!request.signal.aborted) setFound({ q, error });
-      }
-    }, 200);
-    return () => {
-      clearTimeout(id);
-      request.abort();
-    };
+    const id = setTimeout(() => api.get('/search', { params: { q } }).then((r) => setFound({ q, data: r.data })), 200);
+    return () => clearTimeout(id);
   }, [q]);
-  const result = q.trim().length >= 2 && found?.q === q ? found : null;
-  const res = result?.data;
+  const res = q.trim().length >= 2 && found.q === q ? found.data : null;
 
   const go = (to) => {
     navigate(to);
-    requestClose();
+    onClose();
   };
   const pages = [
     { label: 'Home', to: '/' },
@@ -44,97 +37,82 @@ export default function SearchDialog({ onClose }) {
   const empty = res && !res.tasks.length && !res.milestones.length && !res.projects.length && !pages.length;
 
   return (
-    <dialog ref={dialogRef} className="modal-dialog search-dialog" aria-label="Pencarian" {...{ closedby: 'any' }}>
-      <search>
-        <div className="search-dialog-bar">
-          <div className="input-icon grow">
-            <Search size={16} aria-hidden="true" />
-            <input
-              autoFocus
-              type="search"
-              name="search"
-              spellCheck={false}
-              enterKeyHint="search"
-              className="input"
-              placeholder="Search tasks, milestones and pages…"
-              aria-label="Cari tugas, milestone, dan halaman"
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setFound(null);
-              }}
-            />
-          </div>
-          <button type="button" className="icon-btn" aria-label="Tutup pencarian" onClick={requestClose}>
-            <X size={18} />
-          </button>
+    <div
+      className="overlay"
+      style={{ alignItems: 'start', paddingTop: '12vh' }}
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="modal" role="dialog" aria-label="Pencarian">
+        <div className="input-icon" style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
+          <Search size={16} style={{ left: 24 }} />
+          <input
+            autoFocus
+            className="input"
+            style={{ border: 'none', boxShadow: 'none' }}
+            placeholder="Search tasks, milestones and pages…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </div>
-      </search>
-      <div style={{ padding: 6, maxHeight: 420, overflow: 'auto' }}>
-        {result?.error && <FormError message={errorMessage(result.error)} />}
-        {!q && (
-          <p className="sm muted" style={{ padding: 14 }}>
-            Ketik minimal 2 huruf untuk mencari.
-          </p>
-        )}
-        {empty && (
-          <p className="sm muted" style={{ padding: 14 }}>
-            Tidak ada hasil untuk “{q}”.
-          </p>
-        )}
-        {res?.tasks.length > 0 && (
-          <div className="section-title" style={{ padding: '8px 10px 2px' }}>
-            Tasks
-          </div>
-        )}
-        {res?.tasks.map((t) => (
-          <button
-            type="button"
-            key={t.id}
-            className="menu-item"
-            style={{ minBlockSize: 40 }}
-            onClick={() => go(`/projects/${t.projectId}/tasks?task=${t.id}`)}
-          >
-            <StatusIcon status={displayState(t)} />
-            <span className="grow truncate">{t.title}</span>
-            <span className="xs muted truncate">{t.project?.name}</span>
-          </button>
-        ))}
-        {res?.milestones.length > 0 && (
-          <div className="section-title" style={{ padding: '8px 10px 2px' }}>
-            Milestones
-          </div>
-        )}
-        {res?.milestones.map((m) => (
-          <button
-            type="button"
-            key={m.id}
-            className="menu-item"
-            onClick={() => go(`/projects/${m.project.id}/milestones/${m.id}`)}
-          >
-            <Flag size={14} className="faint" />
-            <span className="grow truncate">{m.name}</span>
-            <span className="xs muted">{m.project.name}</span>
-          </button>
-        ))}
-        {(res?.projects.length > 0 || pages.length > 0) && (
-          <div className="section-title" style={{ padding: '8px 10px 2px' }}>
-            Pages
-          </div>
-        )}
-        {res?.projects.map((p) => (
-          <button type="button" key={p.id} className="menu-item" onClick={() => go(`/projects/${p.id}/overview`)}>
-            <ProjectMark project={p} size={16} />
-            {p.name}
-          </button>
-        ))}
-        {pages.map((p) => (
-          <button type="button" key={p.to} className="menu-item" onClick={() => go(p.to)}>
-            <FileText size={14} className="faint" />
-            {p.label}
-          </button>
-        ))}
+        <div style={{ padding: 6, maxHeight: 420, overflow: 'auto' }}>
+          {!q && (
+            <p className="sm muted" style={{ padding: 14 }}>
+              Ketik minimal 2 huruf untuk mencari.
+            </p>
+          )}
+          {empty && (
+            <p className="sm muted" style={{ padding: 14 }}>
+              Tidak ada hasil untuk “{q}”.
+            </p>
+          )}
+          {res?.tasks.length > 0 && (
+            <div className="section-title" style={{ padding: '8px 10px 2px' }}>
+              Tasks
+            </div>
+          )}
+          {res?.tasks.map((t) => (
+            <button
+              key={t.id}
+              className="menu-item"
+              style={{ height: 40 }}
+              onClick={() => go(`/projects/${t.projectId}/tasks?task=${t.id}`)}
+            >
+              <StatusIcon status={displayState(t)} />
+              <span className="grow truncate">{t.title}</span>
+              <span className="xs muted truncate">{t.project?.name}</span>
+            </button>
+          ))}
+          {res?.milestones.length > 0 && (
+            <div className="section-title" style={{ padding: '8px 10px 2px' }}>
+              Milestones
+            </div>
+          )}
+          {res?.milestones.map((m) => (
+            <button key={m.id} className="menu-item" onClick={() => go(`/projects/${m.project.id}/milestones/${m.id}`)}>
+              <Flag size={14} className="faint" />
+              <span className="grow truncate">{m.name}</span>
+              <span className="xs muted">{m.project.name}</span>
+            </button>
+          ))}
+          {(res?.projects.length > 0 || pages.length > 0) && (
+            <div className="section-title" style={{ padding: '8px 10px 2px' }}>
+              Pages
+            </div>
+          )}
+          {res?.projects.map((p) => (
+            <button key={p.id} className="menu-item" onClick={() => go(`/projects/${p.id}/overview`)}>
+              <ProjectMark project={p} size={16} />
+              {p.name}
+            </button>
+          ))}
+          {pages.map((p) => (
+            <button key={p.to} className="menu-item" onClick={() => go(p.to)}>
+              <FileText size={14} className="faint" />
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
-    </dialog>
+    </div>
   );
 }

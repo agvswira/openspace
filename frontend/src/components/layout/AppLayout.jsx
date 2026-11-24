@@ -57,13 +57,13 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
   const projectMenu = useProjectMenu();
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Sidebar">
-      <button type="button" className="icon-btn mobile-only sidebar-close" onClick={onClose} aria-label="Tutup menu">
+    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Navigasi utama">
+      <button className="icon-btn mobile-only sidebar-close" onClick={onClose} aria-label="Tutup menu">
         <X size={16} />
       </button>
       <div className="ws-switch">
         <span className="ws-logo">
-          <img src="/logo.png" width="18" height="20" alt="" />
+          <img src="/logo.png" height="20" alt="" style={{ width: 'auto' }} />
         </span>
         <div className="grow">
           <div className="ws-name truncate">Openspace</div>
@@ -72,78 +72,78 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
         <ChevronsUpDown size={14} className="faint" />
       </div>
 
-      <button type="button" className="search-trigger" onClick={onSearch}>
-        <Search size={15} /> Search <span className="kbd desktop-only">⌘K</span>
+      <button className="search-trigger" onClick={onSearch}>
+        <Search size={15} /> Search <span className="kbd">⌘K</span>
       </button>
 
-      <nav className="nav-scroll" aria-label="Utama">
-        <div className="nav-section">
-          <div className="nav-title">General</div>
-          <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Home size={16} />
-            Home
-          </NavLink>
-          <NavLink to="/my-tasks" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <SquareCheckBig size={16} />
-            My tasks<span className="count">{summary?.openTasks ?? ''}</span>
-          </NavLink>
-        </div>
+      <div className="nav-section">
+        <div className="nav-title">General</div>
+        <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Home size={16} />
+          Home
+        </NavLink>
+        <NavLink to="/my-tasks" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <SquareCheckBig size={16} />
+          My tasks<span className="count">{summary?.openTasks ?? ''}</span>
+        </NavLink>
+      </div>
 
-        <div className="nav-section">
-          <div className="nav-title">
-            Projects
-            <button
-              type="button"
-              className="icon-btn"
-              style={{ width: 22, height: 22 }}
-              onClick={onNewProject}
-              aria-label="Buat proyek baru"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-          {projects.map((p) => (
-            <div key={p.id}>
-              <button
-                type="button"
-                className={`nav-item ${p.id === activeId && !isOpen(p.id) ? 'active' : ''}`}
-                onClick={() => {
-                  setExpanded((e) => ({ ...e, [p.id]: !isOpen(p.id) }));
-                  if (p.id !== activeId) navigate(`/projects/${p.id}/overview`);
-                }}
-                aria-expanded={isOpen(p.id)}
-                {...bind(() => projectMenu(p))}
-              >
-                <ProjectMark project={p} />
-                <span className="grow truncate" style={{ fontWeight: 500 }}>
-                  {p.name}
-                </span>
-                {isOpen(p.id) ? (
-                  <ChevronDown size={14} className="faint" />
-                ) : (
-                  <ChevronRight size={14} className="faint" />
-                )}
-              </button>
-              {isOpen(p.id) && (
-                <div className="nav-sub">
-                  {PROJECT_NAV.map(({ to, label, Icon }) => (
-                    <NavLink
-                      key={to}
-                      to={`/projects/${p.id}/${to}`}
-                      className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                    >
-                      <Icon size={15} />
-                      {label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+      <div className="nav-section">
+        <div className="nav-title">
+          Projects
+          <button
+            className="icon-btn"
+            style={{ width: 22, height: 22 }}
+            onClick={onNewProject}
+            aria-label="Buat proyek baru"
+          >
+            <Plus size={14} />
+          </button>
         </div>
-      </nav>
+        {projects.map((p) => (
+          <div key={p.id}>
+            <button
+              className={`nav-item ${p.id === activeId && !isOpen(p.id) ? 'active' : ''}`}
+              onClick={() => {
+                setExpanded((e) => ({ ...e, [p.id]: !isOpen(p.id) }));
+                if (p.id !== activeId) navigate(`/projects/${p.id}/overview`);
+              }}
+              aria-expanded={isOpen(p.id)}
+              {...bind(() => projectMenu(p))}
+            >
+              <ProjectMark project={p} />
+              <span className="grow truncate" style={{ fontWeight: 500 }}>
+                {p.name}
+              </span>
+              {isOpen(p.id) ? (
+                <ChevronDown size={14} className="faint" />
+              ) : (
+                <ChevronRight size={14} className="faint" />
+              )}
+            </button>
+            {isOpen(p.id) && (
+              <div className="nav-sub">
+                {PROJECT_NAV.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={`/projects/${p.id}/${to}`}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
       <div className="sidebar-footer">
+        <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <Settings size={16} />
+          Workspace settings
+        </NavLink>
         <Menu
           align="left"
           width="100%"
@@ -194,12 +194,6 @@ function Topbar({ onInvite, onMenu }) {
   const match = useMatch('/projects/:projectId/*');
   const { data: project } = useProject(match?.params.projectId);
 
-  const canGoBack = window.history.state?.idx > 0;
-  const goBack = () => {
-    if (canGoBack) navigate(-1);
-    else if (location.pathname !== '/') navigate('/', { replace: true });
-  };
-
   let crumbs;
   if (match) {
     crumbs = (
@@ -235,12 +229,7 @@ function Topbar({ onInvite, onMenu }) {
       <button className="icon-btn mobile-only" onClick={onMenu} aria-label="Buka menu navigasi">
         <MenuIcon size={18} />
       </button>
-      <button
-        className="icon-btn"
-        onClick={goBack}
-        disabled={!canGoBack && location.pathname === '/'}
-        aria-label="Kembali"
-      >
+      <button className="icon-btn" onClick={() => navigate(-1)} aria-label="Kembali">
         <ChevronLeft size={16} />
       </button>
       <nav className="crumbs" aria-label="Breadcrumb">
@@ -343,39 +332,7 @@ function BottomNav({ onSearch, onMenu }) {
   );
 }
 
-function useDocumentTitle() {
-  const location = useLocation();
-  const match = useMatch('/projects/:projectId/:section?');
-  const milestoneMatch = useMatch('/projects/:projectId/milestones/:milestoneId');
-  const { data: project } = useProject(match?.params.projectId);
-
-  useEffect(() => {
-    const projectSections = {
-      overview: 'Overview',
-      tasks: 'Tasks',
-      milestones: 'Milestones',
-      meetings: 'Meetings',
-      members: 'Members',
-      roles: 'Roles',
-      settings: 'Project settings',
-    };
-    let pageTitle = 'Home';
-    if (milestoneMatch) {
-      pageTitle = project ? `Milestone · ${project.name}` : 'Milestone';
-    } else if (match) {
-      const sec = projectSections[match.params.section || 'overview'] || 'Project';
-      pageTitle = project ? `${sec} · ${project.name}` : sec;
-    } else if (location.pathname === '/my-tasks') {
-      pageTitle = 'My tasks';
-    } else if (location.pathname === '/settings') {
-      pageTitle = 'Workspace settings';
-    }
-    document.title = `${pageTitle} | Openspace`;
-  }, [location.pathname, match, milestoneMatch, project]);
-}
-
 export default function AppLayout() {
-  useDocumentTitle();
   const [searchOpen, setSearchOpen] = useState(false);
   const [newProject, setNewProject] = useState(false);
   const [invite, setInvite] = useState(false);
@@ -395,17 +352,13 @@ export default function AppLayout() {
         e.preventDefault();
         setSearchOpen(true);
       }
-      if (e.key === 'Escape' && navOpen) setNavOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navOpen]);
+  }, []);
 
   return (
     <div className="app">
-      <a href="#main-content" className="skip-link sr-only">
-        Lewati ke konten utama
-      </a>
       <Sidebar
         open={navOpen}
         onClose={() => setNavOpen(false)}
@@ -413,14 +366,14 @@ export default function AppLayout() {
         onNewProject={() => setNewProject(true)}
       />
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} />}
-      <div className="main" inert={navOpen || undefined}>
+      <main className="main">
         <Topbar onInvite={() => setInvite(true)} onMenu={() => setNavOpen(true)} />
         {match && <ProjectTabs projectId={match.params.projectId} />}
-        <main id="main-content" className="content" tabIndex={-1}>
+        <div className="content">
           <Outlet context={{ openNewProject: () => setNewProject(true), openInvite: () => setInvite(true) }} />
-        </main>
-      </div>
-      <BottomNav onSearch={() => setSearchOpen(true)} onMenu={() => setNavOpen(true)} inert={navOpen || undefined} />
+        </div>
+      </main>
+      <BottomNav onSearch={() => setSearchOpen(true)} onMenu={() => setNavOpen(true)} />
       {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
       {newProject && <NewProjectModal onClose={() => setNewProject(false)} />}
       {invite && match && <InviteModal projectId={match.params.projectId} onClose={() => setInvite(false)} />}

@@ -1,5 +1,5 @@
-import { Suspense, lazy, useId, useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams, useOutletContext } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, useSearchParams, useOutletContext } from 'react-router-dom';
 import { Kanban, List, Calendar, GanttChart, Search, SlidersHorizontal, Plus, UserPlus, X, Eye } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
 import { projectTaskKeys, useApiMutation, useMeetings, useMilestones, useProject, useTasks } from '../api/hooks';
@@ -9,12 +9,11 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BoardView from '../components/tasks/BoardView';
 import ListView from '../components/tasks/ListView';
+import CalendarView from '../components/tasks/CalendarView';
+import TimelineView from '../components/tasks/TimelineView';
 import TaskFormModal from '../components/tasks/TaskFormModal';
 import TaskDetailPanel, { useCan } from '../components/tasks/TaskDetailPanel';
 import { useTaskActions } from '../components/tasks/taskActions';
-
-const CalendarView = lazy(() => import('../components/tasks/CalendarView'));
-const TimelineView = lazy(() => import('../components/tasks/TimelineView'));
 
 const VIEWS = [
   { key: 'board', label: 'Board', Icon: Kanban },
@@ -31,8 +30,6 @@ const FILTERS = [
 
 export default function Tasks() {
   const { projectId } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const view = params.get('view') || 'board';
   const openTaskId = params.get('task');
@@ -55,16 +52,7 @@ export default function Tasks() {
     const next = new URLSearchParams(params);
     if (v) next.set(k, v);
     else next.delete(k);
-    if (k === 'task' && v && !openTaskId) {
-      setParams(next, { state: { ...location.state, openedFromTaskList: true } });
-    } else {
-      setParams(next, { replace: true, state: v || k !== 'task' ? location.state : null });
-    }
-  };
-
-  const closeTask = () => {
-    if (location.state?.openedFromTaskList) navigate(-1);
-    else setParam('task', '');
+    setParams(next, { replace: k === 'task' ? false : true });
   };
 
   const actions = useTaskActions(projectId, { onOpen: (id) => setParam('task', id) });
@@ -113,21 +101,6 @@ export default function Tasks() {
     bulk: actions,
   };
 
-  const tabBaseId = useId();
-  const onViewTabKeyDown = (e) => {
-    const idx = VIEWS.findIndex((v) => v.key === view);
-    let next = -1;
-    if (e.key === 'ArrowRight') next = (idx + 1) % VIEWS.length;
-    else if (e.key === 'ArrowLeft') next = (idx - 1 + VIEWS.length) % VIEWS.length;
-    else if (e.key === 'Home') next = 0;
-    else if (e.key === 'End') next = VIEWS.length - 1;
-    if (next < 0) return;
-    e.preventDefault();
-    const nextKey = VIEWS[next].key;
-    setParam('view', nextKey === 'board' ? '' : nextKey);
-    document.getElementById(`${tabBaseId}-tab-${nextKey}`)?.focus();
-  };
-
   return (
     <div className="page-wide">
       <div className="page-head" style={{ marginBottom: 12 }}>
@@ -140,13 +113,13 @@ export default function Tasks() {
         <div className="row">
           <AvatarStack users={project?.members ?? []} size={28} />
           {project?.access?.isOwner && (
-            <button type="button" className="btn" onClick={openInvite}>
+            <button className="btn" onClick={openInvite}>
               <UserPlus size={15} />
               Invite
             </button>
           )}
           {canCreate && (
-            <button type="button" className="btn btn-primary desktop-only" onClick={() => setCreating('TODO')}>
+            <button className="btn btn-primary desktop-only" onClick={() => setCreating('TODO')}>
               <Plus size={15} />
               New task
             </button>
@@ -155,22 +128,12 @@ export default function Tasks() {
       </div>
 
       <div className="row-between" style={{ borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
-        <div
-          className="tabs"
-          style={{ border: 'none' }}
-          role="tablist"
-          aria-label="Tampilan tugas"
-          onKeyDown={onViewTabKeyDown}
-        >
+        <div className="tabs" style={{ border: 'none' }} role="tablist">
           {VIEWS.map(({ key, label, Icon }) => (
             <button
-              type="button"
               key={key}
-              id={`${tabBaseId}-tab-${key}`}
               role="tab"
               aria-selected={view === key}
-              aria-controls={`${tabBaseId}-panel`}
-              tabIndex={view === key ? 0 : -1}
               className={`tab ${view === key ? 'active' : ''}`}
               onClick={() => setParam('view', key === 'board' ? '' : key)}
             >
@@ -179,16 +142,12 @@ export default function Tasks() {
             </button>
           ))}
         </div>
-        <search className="row" style={{ paddingBottom: 6 }}>
+        <div className="row" style={{ paddingBottom: 6 }}>
           <div className="input-icon" style={{ width: 220 }}>
-            <Search size={14} aria-hidden="true" />
+            <Search size={14} />
             <input
-              type="search"
-              name="task-search"
-              spellCheck={false}
-              enterKeyHint="search"
               className="input"
-              style={{ minBlockSize: 32 }}
+              style={{ height: 32 }}
               placeholder="Search tasks..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -252,7 +211,7 @@ export default function Tasks() {
               )}
             </div>
           </Menu>
-        </search>
+        </div>
       </div>
 
       {tasksQ.isLoading ? (
@@ -303,24 +262,16 @@ export default function Tasks() {
             </div>
           )}
           {/* key = view: tampilan baru masuk dengan transisi halus saat tab diganti */}
-          <div
-            key={view}
-            id={`${tabBaseId}-panel`}
-            role="tabpanel"
-            aria-labelledby={`${tabBaseId}-tab-${view}`}
-            className="view-swap"
-          >
-            <Suspense fallback={<LoadingBlock rows={4} height={90} />}>
-              {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
-              {view === 'list' && <ListView {...viewProps} />}
-              {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
-              {view === 'timeline' && <TimelineView {...viewProps} milestones={milestones} />}
-            </Suspense>
+          <div key={view} className="view-swap">
+            {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
+            {view === 'list' && <ListView {...viewProps} />}
+            {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
+            {view === 'timeline' && <TimelineView {...viewProps} milestones={milestones} />}
           </div>
         </div>
       )}
       {creating && <TaskFormModal projectId={projectId} defaultStatus={creating} onClose={() => setCreating(null)} />}
-      {openTaskId && <TaskDetailPanel key={openTaskId} taskId={openTaskId} projectId={projectId} onClose={closeTask} />}
+      {openTaskId && <TaskDetailPanel taskId={openTaskId} projectId={projectId} onClose={() => setParam('task', '')} />}
       {rejected && <ConfirmDialog title="Perubahan ditolak" message={rejected} onClose={() => setRejected(null)} />}
       {actions.dialogs}
       {canCreate && (

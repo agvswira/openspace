@@ -116,7 +116,7 @@ function ProjectSettingsForm({ p }) {
 
       <form className="settings-section" onSubmit={submit}>
         <div>
-          <h2 className="card-title">Project details</h2>
+          <h3 className="card-title">Project details</h3>
           <p className="sm muted" style={{ marginTop: 4 }}>
             Name, logo and description shown to everyone in the project.
           </p>
@@ -196,7 +196,7 @@ function ProjectSettingsForm({ p }) {
 
       <section className="settings-section">
         <div>
-          <h2 className="card-title">Project access</h2>
+          <h3 className="card-title">Project access</h3>
           <p className="sm muted" style={{ marginTop: 4 }}>
             Who can open this project and how new people join.
           </p>
@@ -226,7 +226,7 @@ function ProjectSettingsForm({ p }) {
       {isOwner && (
         <section className="settings-section">
           <div>
-            <h2 className="card-title">Danger zone</h2>
+            <h3 className="card-title">Danger zone</h3>
             <p className="sm muted" style={{ marginTop: 4 }}>
               Archiving hides the project but keeps its data. Deleting removes it for everyone.
             </p>
@@ -380,7 +380,7 @@ export function WorkspaceSettings() {
           }}
         >
           <div>
-            <h2 className="card-title">Workspace</h2>
+            <h3 className="card-title">Workspace</h3>
             <p className="sm muted" style={{ marginTop: 4 }}>
               Shown in the sidebar for everyone you invite.
             </p>
@@ -409,7 +409,7 @@ export function WorkspaceSettings() {
         }}
       >
         <div>
-          <h2 className="card-title">Profile</h2>
+          <h3 className="card-title">Profile</h3>
           <p className="sm muted" style={{ marginTop: 4 }}>
             Photo, name, email and role title.
           </p>
@@ -500,7 +500,7 @@ export function WorkspaceSettings() {
 
       <section className="settings-section">
         <div>
-          <h2 className="card-title">Appearance</h2>
+          <h3 className="card-title">Appearance</h3>
           <p className="sm muted" style={{ marginTop: 4 }}>
             Light, dark, or follow your system setting.
           </p>
@@ -520,7 +520,7 @@ export function WorkspaceSettings() {
 
       <section className="settings-section">
         <div>
-          <h2 className="card-title">Notifications</h2>
+          <h3 className="card-title">Notifications</h3>
           <p className="sm muted" style={{ marginTop: 4 }}>
             Choose which events notify you.
           </p>
@@ -546,7 +546,7 @@ export function WorkspaceSettings() {
 
       <section className="settings-section">
         <div>
-          <h2 className="card-title">Archived projects</h2>
+          <h3 className="card-title">Archived projects</h3>
           <p className="sm muted" style={{ marginTop: 4 }}>
             Projects hidden from the sidebar.
           </p>

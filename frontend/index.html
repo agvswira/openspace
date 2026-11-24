@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
-    <script src="/theme-init.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,6 +11,17 @@
       rel="stylesheet"
     />
     <title>Openspace</title>
+    <script>
+      // Terapkan tema sebelum React dimuat agar halaman tidak berkedip putih di tema gelap.
+      (function () {
+        var t = 'system';
+        try {
+          t = localStorage.getItem('openspace-theme') || 'system';
+        } catch (e) {}
+        if (t === 'system') t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

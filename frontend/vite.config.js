@@ -9,15 +9,4 @@ export default defineConfig({
     strictPort: true,
     proxy: { '/api': 'http://localhost:4000' },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'query-vendor': ['@tanstack/react-query', 'axios'],
-          icons: ['lucide-react'],
-        },
-      },
-    },
-  },
 });

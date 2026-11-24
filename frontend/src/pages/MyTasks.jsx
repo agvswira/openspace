@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { Plus, CircleAlert, CalendarDays, CalendarClock, CalendarX, CircleCheck } from 'lucide-react';
 import { useMyTasks } from '../api/hooks';
 import { EmptyState, ErrorState, LoadingBlock } from '../components/ui';
@@ -31,7 +31,6 @@ export default function MyTasks() {
   const { user } = useAuth();
   const [tab, setTab] = useState('open');
   const [creating, setCreating] = useState(false);
-  const tabBaseId = useId();
   const open = useMyTasks('open');
   const completed = useMyTasks('completed');
   const q = tab === 'open' ? open : completed;
@@ -40,14 +39,6 @@ export default function MyTasks() {
       ? groupByDeadline(q.data ?? [])
       : [{ key: 'done', label: 'Completed', Icon: CircleCheck, iconCls: 'st-DONE', items: q.data ?? [] }];
 
-  const onTabKeyDown = (e) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-    e.preventDefault();
-    const next = e.key === 'Home' ? 'open' : e.key === 'End' ? 'completed' : tab === 'open' ? 'completed' : 'open';
-    setTab(next);
-    document.getElementById(`${tabBaseId}-tab-${next}`)?.focus();
-  };
-
   return (
     <div className="page">
       <div className="page-head">
@@ -55,38 +46,24 @@ export default function MyTasks() {
           <h1 className="page-title">My tasks</h1>
           <p className="page-sub">Tasks assigned to {user.name} across every project</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+        <button className="btn btn-primary" onClick={() => setCreating(true)}>
           <Plus size={15} />
           New task
         </button>
       </div>
 
-      <div
-        className="segmented"
-        style={{ marginBottom: 16 }}
-        role="tablist"
-        aria-label="Filter tugas"
-        onKeyDown={onTabKeyDown}
-      >
+      <div className="segmented" style={{ marginBottom: 16 }} role="tablist">
         <button
-          type="button"
-          id={`${tabBaseId}-tab-open`}
           role="tab"
           aria-selected={tab === 'open'}
-          aria-controls={`${tabBaseId}-panel`}
-          tabIndex={tab === 'open' ? 0 : -1}
           className={tab === 'open' ? 'active' : ''}
           onClick={() => setTab('open')}
         >
           Open <span className="muted">{open.data?.length ?? ''}</span>
         </button>
         <button
-          type="button"
-          id={`${tabBaseId}-tab-completed`}
           role="tab"
           aria-selected={tab === 'completed'}
-          aria-controls={`${tabBaseId}-panel`}
-          tabIndex={tab === 'completed' ? 0 : -1}
           className={tab === 'completed' ? 'active' : ''}
           onClick={() => setTab('completed')}
         >
@@ -94,36 +71,34 @@ export default function MyTasks() {
         </button>
       </div>
 
-      <div id={`${tabBaseId}-panel`} role="tabpanel" aria-labelledby={`${tabBaseId}-tab-${tab}`}>
-        {q.isLoading ? (
-          <LoadingBlock rows={4} height={48} />
-        ) : q.error ? (
-          <ErrorState error={q.error} onRetry={q.refetch} />
-        ) : q.data.length === 0 ? (
-          <div className="card">
-            <EmptyState title={tab === 'open' ? 'Semua tugas beres' : 'Belum ada tugas selesai'}>
-              Tugas yang ditugaskan kepada Anda di semua proyek akan muncul di sini.
-            </EmptyState>
-          </div>
-        ) : (
-          <div className="card" style={{ overflow: 'hidden' }}>
-            {groups.map((g, i) => (
-              <div key={g.key}>
-                <div className="group-head" style={{ borderTop: i ? '1px solid var(--border)' : 'none' }}>
-                  <g.Icon size={14} className={g.iconCls} />
-                  {g.label}
-                  <span className="xs muted" style={{ fontWeight: 400 }}>
-                    {g.items.length}
-                  </span>
-                </div>
-                {g.items.map((t) => (
-                  <TaskRow key={t.id} task={t} showMilestone showMenu />
-                ))}
+      {q.isLoading ? (
+        <LoadingBlock rows={4} height={48} />
+      ) : q.error ? (
+        <ErrorState error={q.error} onRetry={q.refetch} />
+      ) : q.data.length === 0 ? (
+        <div className="card">
+          <EmptyState title={tab === 'open' ? 'Semua tugas beres' : 'Belum ada tugas selesai'}>
+            Tugas yang ditugaskan kepada Anda di semua proyek akan muncul di sini.
+          </EmptyState>
+        </div>
+      ) : (
+        <div className="card" style={{ overflow: 'hidden' }}>
+          {groups.map((g, i) => (
+            <div key={g.key}>
+              <div className="group-head" style={{ borderTop: i ? '1px solid var(--border)' : 'none' }}>
+                <g.Icon size={14} className={g.iconCls} />
+                {g.label}
+                <span className="xs muted" style={{ fontWeight: 400 }}>
+                  {g.items.length}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              {g.items.map((t) => (
+                <TaskRow key={t.id} task={t} showMilestone showMenu />
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
       {creating && <TaskFormModal onClose={() => setCreating(false)} />}
     </div>
   );

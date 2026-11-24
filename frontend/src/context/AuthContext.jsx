@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, tokenStore } from '../api/client';
-import { IS_DEMO } from '../demo/demoMode';
 
 const AuthContext = createContext(null);
 
@@ -49,7 +48,6 @@ export function AuthProvider({ children }) {
   );
 
   const logout = useCallback(() => {
-    if (IS_DEMO) return; // demo selalu "masuk"; keluar tidak berlaku
     tokenStore.clear();
     queryClient.clear();
     setState({ user: null, workspace: null, loading: false });

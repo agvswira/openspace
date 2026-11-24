@@ -1,82 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  Mail,
-  Lock,
-  User,
-  Building2,
-  MailCheck,
-  Lock as LockIcon,
-  CircleCheck,
-  Users,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Mail, Lock, User, Building2, MailCheck, Lock as LockIcon, CircleCheck, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api, errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Field, FormError } from '../components/ui';
 
-function usePageTitle(title) {
-  useEffect(() => {
-    document.title = `${title} | Openspace`;
-  }, [title]);
-}
-
-function PasswordInput({
-  id,
-  name,
-  value,
-  onChange,
-  autoComplete,
-  enterKeyHint,
-  minLength,
-  placeholder,
-  invalid,
-  describedBy,
-}) {
-  const [shown, setShown] = useState(false);
-  return (
-    <div className="input-icon input-pw">
-      <Lock size={15} aria-hidden="true" />
-      <input
-        id={id}
-        name={name}
-        className="input"
-        type={shown ? 'text' : 'password'}
-        autoComplete={autoComplete}
-        enterKeyHint={enterKeyHint}
-        minLength={minLength}
-        required
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy || undefined}
-      />
-      <button
-        type="button"
-        className="icon-btn pw-toggle"
-        aria-pressed={shown}
-        aria-label={shown ? 'Sembunyikan password' : 'Tampilkan password'}
-        onClick={() => setShown((s) => !s)}
-      >
-        {shown ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
-      </button>
-    </div>
-  );
-}
-
 function AuthShell({ children }) {
   return (
-    <main className="auth" id="main-content">
-      <section className="auth-hero" aria-label="Openspace overview">
+    <div className="auth">
+      <section className="auth-hero">
         <div className="auth-logo">
-          <img src="/logo.png" width="39" height="44" fetchPriority="high" alt="Logo Openspace" />
+          <img src="/logo.png" height="44" alt="Logo Openspace" style={{ width: 'auto' }} />
         </div>
         <div className="auth-brand">Openspace</div>
         <p className="auth-tagline">Tasks, meetings and milestones for your team, connected in one place.</p>
-        <div className="card auth-preview card-pad" aria-hidden="true">
+        <div className="card auth-preview card-pad" aria-hidden>
           <div className="row-between xs" style={{ marginBottom: 10 }}>
             <span className="row" style={{ fontWeight: 600 }}>
               <span
@@ -108,12 +47,11 @@ function AuthShell({ children }) {
         </div>
       </section>
       <section className="auth-form-wrap">{children}</section>
-    </main>
+    </div>
   );
 }
 
 export function SignIn() {
-  usePageTitle('Sign in');
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -128,10 +66,7 @@ export function SignIn() {
     if (!/^\S+@\S+\.\S+$/.test(form.email)) errs.email = 'Format email tidak valid.';
     if (!form.password) errs.password = 'Password wajib diisi.';
     setErrors(errs);
-    if (Object.keys(errs).length) {
-      document.getElementById(errs.email ? 'email' : 'password')?.focus();
-      return;
-    }
+    if (Object.keys(errs).length) return;
     setBusy(true);
     setError('');
     try {
@@ -146,51 +81,40 @@ export function SignIn() {
 
   return (
     <AuthShell>
-      <form className="auth-form" onSubmit={submit} noValidate aria-labelledby="signin-heading">
+      <form className="auth-form" onSubmit={submit} noValidate>
         <div>
-          <h1 id="signin-heading">Welcome to Openspace</h1>
+          <h1>Welcome to Openspace</h1>
           <p className="muted sm" style={{ marginTop: 4 }}>
             Continue to your workspace.
           </p>
         </div>
-        <Field label="Email" error={errors.email} htmlFor="email" errorId="email-error">
+        <Field label="Email" error={errors.email} htmlFor="email">
           <div className="input-icon">
-            <Mail size={15} aria-hidden="true" />
+            <Mail size={15} />
             <input
               id="email"
-              name="email"
               className="input"
               type="email"
-              autoComplete="username"
-              spellCheck={false}
-              enterKeyHint="next"
-              required
+              autoComplete="email"
               value={form.email}
-              onChange={(e) => {
-                setForm({ ...form, email: e.target.value });
-                if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
-              }}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="name@example.com"
-              aria-invalid={!!errors.email || undefined}
-              aria-describedby={errors.email ? 'email-error' : undefined}
             />
           </div>
         </Field>
-        <Field label="Password" error={errors.password} htmlFor="password" errorId="password-error">
-          <PasswordInput
-            id="password"
-            name="password"
-            autoComplete="current-password"
-            enterKeyHint="done"
-            value={form.password}
-            onChange={(e) => {
-              setForm({ ...form, password: e.target.value });
-              if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
-            }}
-            placeholder="••••••••"
-            invalid={!!errors.password}
-            describedBy={errors.password ? 'password-error' : undefined}
-          />
+        <Field label="Password" error={errors.password} htmlFor="password">
+          <div className="input-icon">
+            <Lock size={15} />
+            <input
+              id="password"
+              className="input"
+              type="password"
+              autoComplete="current-password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="••••••••"
+            />
+          </div>
         </Field>
         <div style={{ textAlign: 'right', marginTop: -8 }}>
           <Link to="/forgot-password" className="link sm">
@@ -198,7 +122,7 @@ export function SignIn() {
           </Link>
         </div>
         <FormError message={error} />
-        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
+        <button className="btn btn-primary btn-block" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
         <p className="sm muted" style={{ textAlign: 'center' }}>
@@ -213,17 +137,13 @@ export function SignIn() {
 }
 
 export function SignUp() {
-  usePageTitle('Create account');
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', workspaceName: '' });
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const set = (k) => (e) => {
-    setForm({ ...form, [k]: e.target.value });
-    if (errors[k]) setErrors((prev) => ({ ...prev, [k]: '' }));
-  };
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submit = async (e) => {
     e.preventDefault();
@@ -233,11 +153,7 @@ export function SignUp() {
     if (form.password.length < 8) errs.password = 'Password minimal 8 karakter.';
     if (form.workspaceName.trim().length < 2) errs.workspaceName = 'Nama workspace minimal 2 karakter.';
     setErrors(errs);
-    if (Object.keys(errs).length) {
-      const firstId = errs.name ? 'name' : errs.email ? 'email' : errs.password ? 'pw' : 'ws';
-      document.getElementById(firstId)?.focus();
-      return;
-    }
+    if (Object.keys(errs).length) return;
     setBusy(true);
     setError('');
     try {
@@ -252,89 +168,45 @@ export function SignUp() {
 
   return (
     <AuthShell>
-      <form className="auth-form" onSubmit={submit} noValidate aria-labelledby="signup-heading">
+      <form className="auth-form" onSubmit={submit} noValidate>
         <div>
-          <h1 id="signup-heading">Create your account</h1>
+          <h1>Create your account</h1>
           <p className="muted sm" style={{ marginTop: 4 }}>
             You will also create a workspace for your team.
           </p>
         </div>
-        <Field label="Full name" error={errors.name} htmlFor="name" errorId="name-error">
+        <Field label="Full name" error={errors.name} htmlFor="name">
           <div className="input-icon">
-            <User size={15} aria-hidden="true" />
-            <input
-              id="name"
-              name="name"
-              className="input"
-              autoComplete="name"
-              enterKeyHint="next"
-              required
-              value={form.name}
-              onChange={set('name')}
-              aria-invalid={!!errors.name || undefined}
-              aria-describedby={errors.name ? 'name-error' : undefined}
-            />
+            <User size={15} />
+            <input id="name" className="input" value={form.name} onChange={set('name')} />
           </div>
         </Field>
-        <Field label="Email" error={errors.email} htmlFor="email" errorId="signup-email-error">
+        <Field label="Email" error={errors.email} htmlFor="email">
           <div className="input-icon">
-            <Mail size={15} aria-hidden="true" />
-            <input
-              id="email"
-              name="email"
-              type="email"
-              className="input"
-              autoComplete="username"
-              spellCheck={false}
-              enterKeyHint="next"
-              required
-              value={form.email}
-              onChange={set('email')}
-              aria-invalid={!!errors.email || undefined}
-              aria-describedby={errors.email ? 'signup-email-error' : undefined}
-            />
+            <Mail size={15} />
+            <input id="email" type="email" className="input" value={form.email} onChange={set('email')} />
           </div>
         </Field>
-        <Field
-          label="Password"
-          error={errors.password}
-          hint="At least 8 characters."
-          htmlFor="pw"
-          hintId="pw-hint"
-          errorId="pw-error"
-        >
-          <PasswordInput
-            id="pw"
-            name="password"
-            autoComplete="new-password"
-            enterKeyHint="next"
-            minLength={8}
-            value={form.password}
-            onChange={set('password')}
-            invalid={!!errors.password}
-            describedBy={errors.password ? 'pw-error' : 'pw-hint'}
-          />
-        </Field>
-        <Field label="Workspace name" error={errors.workspaceName} htmlFor="ws" errorId="ws-error">
+        <Field label="Password" error={errors.password} hint="At least 8 characters." htmlFor="pw">
           <div className="input-icon">
-            <Building2 size={15} aria-hidden="true" />
+            <Lock size={15} />
+            <input id="pw" type="password" className="input" value={form.password} onChange={set('password')} />
+          </div>
+        </Field>
+        <Field label="Workspace name" error={errors.workspaceName} htmlFor="ws">
+          <div className="input-icon">
+            <Building2 size={15} />
             <input
               id="ws"
-              name="organization"
               className="input"
-              autoComplete="organization"
-              enterKeyHint="done"
-              required
               value={form.workspaceName}
               onChange={set('workspaceName')}
               placeholder="e.g. Kelompok 3"
-              aria-invalid={!!errors.workspaceName || undefined}
-              aria-describedby={errors.workspaceName ? 'ws-error' : undefined}
             />
           </div>
         </Field>
         <FormError message={error} />
-        <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
+        <button className="btn btn-primary btn-block" disabled={busy}>
           {busy ? 'Creating…' : 'Create account'}
         </button>
         <p className="sm muted" style={{ textAlign: 'center' }}>
@@ -349,18 +221,13 @@ export function SignUp() {
 }
 
 export function ForgotPassword() {
-  usePageTitle('Forgot password');
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setError('Format email tidak valid.');
-      document.getElementById('email')?.focus();
-      return;
-    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) return setError('Format email tidak valid.');
     try {
       await api.post('/auth/forgot-password', { email });
       setSent(true);
@@ -386,38 +253,27 @@ export function ForgotPassword() {
           </Link>
         </div>
       ) : (
-        <form className="auth-form" onSubmit={submit} noValidate aria-labelledby="forgot-heading">
+        <form className="auth-form" onSubmit={submit} noValidate>
           <div>
-            <h1 id="forgot-heading">Forgot password?</h1>
+            <h1>Forgot password?</h1>
             <p className="muted sm" style={{ marginTop: 4 }}>
               Enter your email and we will send a reset link.
             </p>
           </div>
           <Field label="Email" htmlFor="email">
             <div className="input-icon">
-              <Mail size={15} aria-hidden="true" />
+              <Mail size={15} />
               <input
                 id="email"
-                name="email"
                 type="email"
                 className="input"
-                autoComplete="username"
-                spellCheck={false}
-                enterKeyHint="done"
-                required
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (error) setError('');
-                }}
-                aria-invalid={!!error || undefined}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
           </Field>
           <FormError message={error} />
-          <button type="submit" className="btn btn-primary btn-block">
-            Send reset link
-          </button>
+          <button className="btn btn-primary btn-block">Send reset link</button>
           <p className="sm" style={{ textAlign: 'center' }}>
             <Link to="/signin" className="link">
               Back to sign in
@@ -430,7 +286,6 @@ export function ForgotPassword() {
 }
 
 export function ResetPassword() {
-  usePageTitle('Reset password');
   const { token } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
@@ -440,16 +295,8 @@ export function ResetPassword() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (password.length < 8) {
-      setError('Password minimal 8 karakter.');
-      document.getElementById('np')?.focus();
-      return;
-    }
-    if (password !== confirm) {
-      setError('Konfirmasi password tidak sama.');
-      document.getElementById('cp')?.focus();
-      return;
-    }
+    if (password.length < 8) return setError('Password minimal 8 karakter.');
+    if (password !== confirm) return setError('Konfirmasi password tidak sama.');
     try {
       await api.post('/auth/reset-password', { token, password });
       setDone(true);
@@ -461,44 +308,29 @@ export function ResetPassword() {
 
   return (
     <AuthShell>
-      <form className="auth-form" onSubmit={submit} noValidate aria-labelledby="reset-heading">
-        <h1 id="reset-heading">Set a new password</h1>
-        <Field label="New password" htmlFor="np" hint="At least 8 characters." hintId="np-hint">
-          <PasswordInput
+      <form className="auth-form" onSubmit={submit} noValidate>
+        <h1>Set a new password</h1>
+        <Field label="New password" htmlFor="np">
+          <input
             id="np"
-            name="new-password"
-            autoComplete="new-password"
-            enterKeyHint="next"
-            minLength={8}
+            type="password"
+            className="input"
             value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (error) setError('');
-            }}
-            describedBy="np-hint"
+            onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
         <Field label="Confirm password" htmlFor="cp">
-          <PasswordInput
+          <input
             id="cp"
-            name="confirm-password"
-            autoComplete="new-password"
-            enterKeyHint="done"
-            minLength={8}
+            type="password"
+            className="input"
             value={confirm}
-            onChange={(e) => {
-              setConfirm(e.target.value);
-              if (error) setError('');
-            }}
+            onChange={(e) => setConfirm(e.target.value)}
           />
         </Field>
         <FormError message={error} />
-        {done && (
-          <p className="sm st-DONE" role="status">
-            Password diperbarui. Mengarahkan ke halaman login…
-          </p>
-        )}
-        <button type="submit" className="btn btn-primary btn-block" disabled={done}>
+        {done && <p className="sm st-DONE">Password diperbarui. Mengarahkan ke halaman login…</p>}
+        <button className="btn btn-primary btn-block" disabled={done}>
           Update password
         </button>
       </form>
@@ -508,7 +340,6 @@ export function ResetPassword() {
 
 // Penerimaan undangan proyek dari tautan email.
 export function AcceptInvite() {
-  usePageTitle('Project invitation');
   const { token } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -545,7 +376,7 @@ export function AcceptInvite() {
             {inv.status !== 'PENDING' ? (
               <FormError message="Undangan ini sudah tidak berlaku." />
             ) : user ? (
-              <button type="button" className="btn btn-primary btn-block" onClick={accept}>
+              <button className="btn btn-primary btn-block" onClick={accept}>
                 Accept invitation
               </button>
             ) : (

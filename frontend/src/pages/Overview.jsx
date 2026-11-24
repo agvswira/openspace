@@ -220,7 +220,7 @@ export default function Overview() {
           <div className="grid-2" style={{ marginTop: 14 }}>
             <section className="card">
               <div className="card-head">
-                <h2 className="card-title">Task status</h2>
+                <span className="card-title">Task status</span>
                 <select
                   className="select select-sm"
                   value={scope}
@@ -283,7 +283,7 @@ export default function Overview() {
 
             <section className="card">
               <div className="card-head">
-                <h2 className="card-title">Next milestone</h2>
+                <span className="card-title">Next milestone</span>
                 <Link to={`/projects/${projectId}/milestones`} className="btn btn-sm">
                   View all
                 </Link>
@@ -345,7 +345,7 @@ export default function Overview() {
           <div className="grid-2" style={{ marginTop: 14, gridTemplateColumns: '3fr 2fr' }}>
             <section className="card">
               <div className="card-head">
-                <h2 className="card-title">Needs attention</h2>
+                <span className="card-title">Needs attention</span>
                 <span className="badge bg-OVERDUE st-OVERDUE">{o.needsAttention.length}</span>
               </div>
               {o.needsAttention.length === 0 && (
@@ -392,7 +392,7 @@ export default function Overview() {
 
             <section className="card">
               <div className="card-head">
-                <h2 className="card-title">Workload by assignee</h2>
+                <span className="card-title">Workload by assignee</span>
                 <span className="xs muted">Open tasks</span>
               </div>
               <div style={{ padding: '0 16px 14px' }}>

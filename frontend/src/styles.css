@@ -44,13 +44,13 @@
   --shadow: 0 1px 3px rgba(24, 24, 27, 0.08), 0 1px 2px rgba(24, 24, 27, 0.04);
   --shadow-lg: 0 16px 40px rgba(24, 24, 27, 0.14), 0 2px 6px rgba(24, 24, 27, 0.06);
 
-  /* Skala tipografi (rem agar mengikuti pengaturan ukuran teks OS/browser) */
-  --fs-page: 1.75rem;
-  --fs-h2: 1.125rem;
-  --fs-h3: 0.9375rem;
-  --fs-body: 0.875rem;
-  --fs-sm: 0.8125rem;
-  --fs-xs: 0.75rem;
+  /* Skala tipografi: judul halaman 28px s.d. keterangan 12px */
+  --fs-page: 28px;
+  --fs-h2: 18px;
+  --fs-h3: 15px;
+  --fs-body: 14px;
+  --fs-sm: 13px;
+  --fs-xs: 12px;
 
   /* Token turunan: dipakai komponen agar tema gelap cukup mengganti nilai di sini */
   --hover-overlay: rgba(24, 24, 27, 0.05);
@@ -71,80 +71,8 @@
   --overdue-border: #fecaca;
   --blocked-border: #fde68a;
   --dep-line: #d97706;
-  --dep-line-done: #7c8aa0;
   --tl-today: rgba(37, 99, 235, 0.06);
-  color-scheme: light dark;
-
-  &:has(> head > meta[name='color-scheme'][content='dark']) {
-    color-scheme: dark;
-  }
-  &:has(> head > meta[name='color-scheme'][content='light']) {
-    color-scheme: light;
-  }
-}
-
-/* ===== Tema gelap: mengikuti preferensi OS tanpa bergantung pada JS, atau override data-theme ===== */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg-app: #09090b;
-    --bg-panel: #18181b;
-    --bg-subtle: #1c1c20;
-    --bg-muted: #27272a;
-    --bg-hover: #27272a;
-    --border: #2e2e33;
-    --border-strong: #3f3f46;
-
-    --text: #fafafa;
-    --text-2: #d4d4d8;
-    --text-muted: #a1a1aa;
-    --text-faint: #71717a;
-
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --primary-soft: rgba(59, 130, 246, 0.15);
-
-    --todo: #60a5fa;
-    --todo-bg: rgba(59, 130, 246, 0.14);
-    --progress: #fb923c;
-    --progress-bg: rgba(249, 115, 22, 0.14);
-    --done: #4ade80;
-    --done-bg: rgba(34, 197, 94, 0.14);
-    --overdue: #f87171;
-    --overdue-bg: rgba(239, 68, 68, 0.14);
-    --blocked: #fbbf24;
-    --blocked-bg: rgba(245, 158, 11, 0.14);
-    --purple: #c084fc;
-    --purple-bg: rgba(168, 85, 247, 0.15);
-
-    --prio-high: #f87171;
-    --prio-medium: #fb923c;
-    --prio-low: #a1a1aa;
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.35);
-
-    --hover-overlay: rgba(255, 255, 255, 0.06);
-    --skeleton-hi: #303036;
-    --auth-hero: linear-gradient(160deg, #0c0c0e 0%, #111113 100%);
-    --auth-logo-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border);
-    --primary-border: rgba(59, 130, 246, 0.35);
-    --primary-border-strong: rgba(96, 165, 250, 0.6);
-    --focus-ring: rgba(59, 130, 246, 0.3);
-    --backdrop: rgba(0, 0, 0, 0.6);
-    --backdrop-soft: rgba(0, 0, 0, 0.4);
-    --inverse-bg: #fafafa;
-    --inverse-text: #18181b;
-    --toast-error: #991b1b;
-    --todo-border: rgba(59, 130, 246, 0.4);
-    --progress-border: rgba(249, 115, 22, 0.4);
-    --done-border: rgba(34, 197, 94, 0.4);
-    --overdue-border: rgba(239, 68, 68, 0.4);
-    --blocked-border: rgba(245, 158, 11, 0.4);
-    --dep-line: #f59e0b;
-    --tl-today: rgba(59, 130, 246, 0.12);
-    color-scheme: dark;
-  }
+  color-scheme: light;
 }
 
 /* ===== Tema gelap: data-theme di <html> diatur oleh ThemeContext ===== */
@@ -205,7 +133,6 @@
   --overdue-border: rgba(239, 68, 68, 0.4);
   --blocked-border: rgba(245, 158, 11, 0.4);
   --dep-line: #f59e0b;
-  --dep-line-done: #8b8b96;
   --tl-today: rgba(59, 130, 246, 0.12);
   color-scheme: dark;
 }
@@ -222,14 +149,9 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: var(--fs-body);
-  line-height: 1.5;
   color: var(--text);
   background: var(--bg-app);
   -webkit-font-smoothing: antialiased;
-}
-::selection {
-  background: var(--primary);
-  color: #fff;
 }
 button,
 input,
@@ -247,23 +169,6 @@ h2,
 h3,
 p {
   margin: 0;
-}
-h1,
-h2,
-h3,
-.page-title,
-.table th {
-  text-wrap: balance;
-}
-.page-sub,
-.auth-tagline,
-.detail-body p {
-  text-wrap: pretty;
-}
-.detail-body,
-.task-card-desc,
-.comment {
-  overflow-wrap: break-word;
 }
 .mono {
   font-family: var(--font-mono);
@@ -301,29 +206,12 @@ h3,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sr-only:where(:not(:focus-within, :active)) {
+.sr-only {
   position: absolute;
-  clip-path: inset(50%);
-  overflow: hidden;
   width: 1px;
   height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  white-space: nowrap;
-}
-.skip-link:focus-visible {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 200;
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  background: var(--primary);
-  color: #fff;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 :focus-visible {
   outline: 2px solid var(--primary);
@@ -337,8 +225,8 @@ h3,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-block-size: 34px;
-  padding: 6px 12px;
+  height: 34px;
+  padding: 0 12px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg-panel);
@@ -351,7 +239,7 @@ h3,
     background 0.12s,
     border-color 0.12s;
 }
-.btn:hover:not(:disabled) {
+.btn:hover {
   background: var(--bg-hover);
 }
 .btn:disabled {
@@ -363,13 +251,13 @@ h3,
   border-color: var(--primary);
   color: #fff;
 }
-.btn-primary:hover:not(:disabled) {
+.btn-primary:hover {
   background: var(--primary-hover);
 }
 .btn-danger {
   color: var(--overdue);
 }
-.btn-danger:hover:not(:disabled) {
+.btn-danger:hover {
   background: var(--overdue-bg);
 }
 .btn-danger-solid {
@@ -377,7 +265,7 @@ h3,
   border-color: #dc2626;
   color: #fff;
 }
-.btn-danger-solid:hover:not(:disabled) {
+.btn-danger-solid:hover {
   background: #b91c1c;
 }
 .btn-ghost {
@@ -385,19 +273,17 @@ h3,
   background: transparent;
 }
 .btn-sm {
-  min-block-size: 28px;
-  padding: 4px 10px;
+  height: 28px;
+  padding: 0 10px;
   font-size: var(--fs-xs);
 }
 .btn-block {
   width: 100%;
-  min-block-size: 38px;
+  height: 38px;
 }
 .icon-btn {
   display: inline-grid;
   place-items: center;
-  min-width: 30px;
-  min-height: 30px;
   width: 30px;
   height: 30px;
   border-radius: var(--radius-sm);
@@ -406,7 +292,7 @@ h3,
   color: var(--text-muted);
   cursor: pointer;
 }
-.icon-btn:hover:not(:disabled) {
+.icon-btn:hover {
   background: var(--bg-hover);
   color: var(--text);
 }
@@ -427,18 +313,17 @@ h3,
 .select,
 .textarea {
   width: 100%;
-  min-block-size: 36px;
-  padding: 6px 10px;
-  border: 1px solid var(--border-strong);
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-panel);
   font-size: var(--fs-sm);
+  outline: none;
 }
 .textarea {
   height: auto;
   min-height: 84px;
-  max-block-size: 240px;
-  field-sizing: content;
   padding: 8px 10px;
   resize: vertical;
   line-height: 1.5;
@@ -449,11 +334,6 @@ h3,
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
-.input:user-invalid,
-.select:user-invalid,
-.textarea:user-invalid {
-  border-color: var(--overdue);
-}
 .input-icon {
   position: relative;
 }
@@ -463,19 +343,9 @@ h3,
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-faint);
-  pointer-events: none;
 }
 .input-icon > .input {
   padding-left: 32px;
-}
-.input-pw > .input {
-  padding-right: 36px;
-}
-.pw-toggle {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
 }
 .field-error {
   color: var(--overdue);
@@ -569,10 +439,6 @@ h3,
   border-radius: 5px;
   background: var(--bg-subtle);
 }
-.nav-scroll {
-  display: flex;
-  flex-direction: column;
-}
 .nav-section {
   margin-top: 14px;
 }
@@ -588,8 +454,8 @@ h3,
   display: flex;
   align-items: center;
   gap: 9px;
-  min-block-size: 32px;
-  padding: 4px 8px;
+  height: 32px;
+  padding: 0 8px;
   border-radius: var(--radius-sm);
   font-size: var(--fs-sm);
   color: var(--text-2);
@@ -617,7 +483,7 @@ h3,
   margin: 2px 0 4px 18px;
 }
 .nav-sub .nav-item {
-  min-block-size: 30px;
+  height: 30px;
 }
 .project-dot {
   width: 18px;
@@ -796,8 +662,8 @@ h3,
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-block-size: 22px;
-  padding: 2px 8px;
+  height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   font-size: var(--fs-xs);
   font-weight: 500;
@@ -856,8 +722,8 @@ h3,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-block-size: 26px;
-  padding: 3px 10px;
+  height: 26px;
+  padding: 0 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   font-size: var(--fs-xs);
@@ -910,8 +776,8 @@ h3,
   display: flex;
   align-items: center;
   gap: 7px;
-  min-block-size: 38px;
-  padding: 6px 10px;
+  height: 38px;
+  padding: 0 10px;
   border: none;
   background: none;
   cursor: pointer;
@@ -974,139 +840,6 @@ h3,
   color: var(--text);
   font-size: var(--fs-h3);
 }
-@property --arc-start {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-@property --arc-end {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-@property --progress-dash-animation {
-  syntax: '*';
-  inherits: false;
-  initial-value:
-    ,
-    progress-dash 2.4s ease-in-out infinite;
-}
-@property --value {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0;
-}
-
-progress.loading-spinner:indeterminate {
-  --_from: calc(90deg + var(--arc-start, 0deg));
-  --_to: calc(90deg + var(--arc-end, 158deg));
-  --size: 24px;
-  --thickness: 2.5px;
-  --spinner-color: var(--primary);
-  --track-color: var(--border);
-  --spinner-duration: 1.2s;
-  --_used-spinner-duration: var(--spinner-duration);
-
-  position: relative;
-  display: inline-block;
-  width: var(--size);
-  height: var(--size);
-  border-radius: 50%;
-  appearance: none;
-  border: 0;
-  background: conic-gradient(from var(--_from), var(--spinner-color) calc(var(--_to) - var(--_from)), transparent 0)
-    var(--track-color);
-  animation: progress-spin var(--_used-spinner-duration) linear infinite var(--progress-dash-animation,);
-
-  @supports (background-clip: border-area) {
-    background-clip: border-area;
-    border: var(--thickness) solid transparent;
-    background-origin: border-box;
-  }
-
-  @supports not (background-clip: border-area) {
-    --clip-boundary: calc(100% - var(--thickness));
-    mask-image: radial-gradient(farthest-side, transparent var(--clip-boundary), black var(--clip-boundary));
-    border: 0;
-  }
-
-  @media (forced-colors: active) {
-    forced-color-adjust: none;
-    --spinner-color: CanvasText;
-    --track-color: Canvas;
-  }
-}
-progress.loading-spinner:indeterminate::-webkit-progress-bar,
-progress.loading-spinner:indeterminate::-webkit-progress-value,
-progress.loading-spinner:indeterminate::-moz-progress-bar,
-progress.loading-spinner:indeterminate::slider-fill {
-  display: none;
-  background: none;
-}
-@keyframes progress-spin {
-  to {
-    rotate: 1turn;
-  }
-}
-@keyframes progress-dash {
-  from {
-    --arc-start: 0deg;
-    --arc-end: 3deg;
-  }
-  50% {
-    --arc-start: 100deg;
-    --arc-end: 358deg;
-  }
-  to {
-    --arc-start: 360deg;
-    --arc-end: 363deg;
-  }
-}
-
-progress.progress-ring {
-  --size: 34px;
-  --thickness: 3px;
-  --track-color: var(--bg-muted);
-  --fill-color: var(--primary);
-  --value: 0;
-  width: var(--size);
-  height: var(--size);
-  flex-shrink: 0;
-  appearance: none;
-  border-radius: 50%;
-  border: 0;
-  background: conic-gradient(var(--fill-color) calc(var(--value) * 1%), var(--track-color) 0);
-  transition: --value 0s ease-in-out;
-
-  @media (prefers-reduced-motion: no-preference) {
-    transition-duration: 0.4s;
-  }
-
-  @supports (background-clip: border-area) {
-    background-clip: border-area;
-    border: var(--thickness) solid transparent;
-    background-origin: border-box;
-  }
-
-  @supports not (background-clip: border-area) {
-    mask-image: radial-gradient(transparent calc(50% - var(--thickness)), black calc(50% - var(--thickness) + 0.5px));
-    border: 0;
-  }
-
-  @media (forced-colors: active) {
-    forced-color-adjust: none;
-    --fill-color: CanvasText;
-    --track-color: Canvas;
-  }
-}
-progress.progress-ring::-webkit-progress-bar,
-progress.progress-ring::-webkit-progress-value,
-progress.progress-ring::-moz-progress-bar,
-progress.progress-ring::slider-fill {
-  display: none;
-  background: none;
-}
-
 .spinner {
   width: 20px;
   height: 20px;
@@ -1133,35 +866,6 @@ progress.progress-ring::slider-fill {
 }
 
 /* ===== Dialog, panel, menu, toast ===== */
-dialog.modal-dialog {
-  width: calc(100% - 48px);
-  max-width: 520px;
-  max-height: calc(100dvh - 48px);
-  margin: auto;
-  padding: 0;
-  border: 1px solid var(--border);
-  overflow: auto;
-  background: var(--bg-panel);
-  color: var(--text);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  contain: layout style;
-}
-dialog.modal-dialog.modal-lg {
-  max-width: 760px;
-}
-dialog.modal-dialog.search-dialog {
-  margin-block-start: 12vh;
-  margin-block-end: auto;
-}
-dialog.modal-dialog:modal {
-  overscroll-behavior: contain;
-}
-dialog.modal-dialog::backdrop {
-  overflow: hidden;
-  overscroll-behavior: contain;
-  background: var(--backdrop);
-}
 .overlay {
   position: fixed;
   inset: 0;
@@ -1206,17 +910,6 @@ dialog.modal-dialog::backdrop {
   gap: 8px;
   padding: 12px 20px 18px;
 }
-.search-dialog-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.search-dialog-bar .input {
-  border-color: transparent;
-  background: transparent;
-}
 .drawer-overlay {
   position: fixed;
   inset: 0;
@@ -1236,7 +929,6 @@ dialog.modal-dialog::backdrop {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  contain: layout style;
   animation: slidein 0.18s ease-out;
 }
 @keyframes slidein {
@@ -1249,41 +941,19 @@ dialog.modal-dialog::backdrop {
   position: absolute;
   z-index: 60;
   min-width: 200px;
-  margin: 0;
   background: var(--bg-panel);
-  color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   padding: 4px;
-}
-.popover[popover] {
-  inset: auto;
-  margin: 0;
-}
-@supports (position-area: block-end) {
-  .popover-anchored[popover] {
-    position: fixed;
-    inset: auto;
-    margin: 0;
-    margin-block-start: 4px;
-    position-area: block-end span-inline-end;
-    position-try-fallbacks:
-      flip-block,
-      flip-inline,
-      flip-block flip-inline;
-  }
-  .popover-anchored.align-right[popover] {
-    position-area: block-end span-inline-start;
-  }
 }
 .menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-block-size: 32px;
-  padding: 4px 10px;
+  height: 32px;
+  padding: 0 10px;
   border: none;
   background: none;
   border-radius: 6px;
@@ -1291,7 +961,7 @@ dialog.modal-dialog::backdrop {
   cursor: pointer;
   text-align: left;
 }
-.menu-item:hover:not(:disabled) {
+.menu-item:hover {
   background: var(--bg-hover);
 }
 .menu-item.danger {
@@ -1312,17 +982,6 @@ dialog.modal-dialog::backdrop {
   gap: 8px;
   align-items: center;
 }
-.toasts[popover] {
-  inset: auto auto 20px 50%;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  overflow: visible;
-}
-.toasts[popover]:not(:popover-open) {
-  display: none;
-}
 .toast {
   display: flex;
   align-items: center;
@@ -1333,28 +992,10 @@ dialog.modal-dialog::backdrop {
   color: var(--inverse-text);
   font-size: var(--fs-sm);
   box-shadow: var(--shadow-lg);
-  max-width: min(520px, calc(100vw - 24px));
+  max-width: 520px;
 }
 .toast.error {
   background: var(--toast-error);
-  color: #fff;
-}
-.toast-close {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-right: -4px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: inherit;
-  opacity: 0.75;
-  cursor: pointer;
-}
-.toast-close:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ===== Tabel/list ===== */
@@ -1477,38 +1118,7 @@ dialog.modal-dialog::backdrop {
   display: grid;
   grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 14px;
-  align-items: stretch; /* kolom pendek ikut setinggi kolom terpanjang: ruang kosongnya tetap area jatuh */
-}
-.board-col {
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--radius);
-  outline: 2px dashed transparent;
-  outline-offset: 4px;
-  transition:
-    background-color var(--dur) var(--ease),
-    outline-color var(--dur) var(--ease);
-}
-.board-col.drop {
-  background: var(--primary-soft);
-  outline-color: var(--primary-border-strong);
-}
-.board-col.drop-denied {
-  background: var(--overdue-bg);
-  outline-color: var(--overdue-border);
-  cursor: no-drop;
-}
-.drop-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  border: 1px solid var(--overdue-border);
-  color: var(--overdue);
-  font-size: var(--fs-xs);
+  align-items: start;
 }
 .col-head {
   display: flex;
@@ -1532,12 +1142,17 @@ dialog.modal-dialog::backdrop {
   height: 26px;
 }
 .col-body {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 120px;
   border-radius: var(--radius);
+  transition: background 0.12s;
+}
+.col-body.drop {
+  background: var(--primary-soft);
+  outline: 2px dashed var(--primary-border-strong);
+  outline-offset: 2px;
 }
 .task-card {
   padding: 12px;
@@ -1844,15 +1459,6 @@ dialog.modal-dialog::backdrop {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-.comment-box .input {
-  min-width: 0;
-  width: 0;
-}
-.comment-box .form-error {
-  flex-basis: 100%;
 }
 .section-title {
   font-size: var(--fs-xs);
@@ -2118,8 +1724,8 @@ dialog.modal-dialog::backdrop {
   align-items: center;
   gap: 6px;
   width: 100%;
-  min-block-size: 32px;
-  padding: 4px 10px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px dashed transparent;
   border-radius: var(--radius);
   background: none;
@@ -2137,29 +1743,6 @@ dialog.modal-dialog::backdrop {
   flex-direction: column;
   gap: 4px;
 }
-.quick-add-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.quick-add-row .input {
-  flex: 1;
-  min-width: 0;
-  min-block-size: 32px;
-}
-.task-title-btn {
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  max-width: 100%;
-}
-.task-title-btn:hover {
-  color: var(--primary);
-}
 .card-more {
   width: 24px;
   height: 24px;
@@ -2174,12 +1757,6 @@ dialog.modal-dialog::backdrop {
 /* ===== List: pilihan, aksi massal, judul langsung ===== */
 .table-scroll {
   overflow-x: auto;
-  container-type: inline-size;
-}
-.table thead {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 1;
 }
 .table tr.selected td {
   background: var(--primary-soft);
@@ -2229,31 +1806,19 @@ dialog.modal-dialog::backdrop {
 .tl-links {
   position: absolute;
   inset: 0;
-  z-index: 0; /* di bawah bar (z-index 1), di atas kolom hari */
+  z-index: 2;
   pointer-events: none;
   overflow: visible;
-}
-.tl-links-live {
-  z-index: 3;
-}
-.tl-link path:first-child {
-  transition:
-    stroke-width var(--dur-fast) var(--ease),
-    opacity var(--dur-fast) var(--ease);
 }
 .tl-link-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 10;
+  stroke-width: 9;
   pointer-events: stroke;
   cursor: pointer;
 }
-.tl-link:hover path:first-child {
-  stroke-width: 3;
-}
 .tl-link-hit:hover {
   stroke: var(--focus-ring);
-  stroke-opacity: 0.35;
 }
 .tl-bar.editable {
   cursor: grab;
@@ -2465,16 +2030,19 @@ dialog.modal-dialog::backdrop {
     gap: 4px;
     padding: 6px 10px;
     overflow-x: auto;
-    scrollbar-width: auto;
+    scrollbar-width: none;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+  }
+  .mobile-tabs::-webkit-scrollbar {
+    display: none;
   }
   .mobile-tab {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-block-size: 32px;
-    padding: 4px 12px;
+    height: 32px;
+    padding: 0 12px;
     border-radius: 999px;
     font-size: var(--fs-sm);
     color: var(--text-muted);
@@ -2576,17 +2144,11 @@ dialog.modal-dialog::backdrop {
   }
   .tabs {
     overflow-x: auto;
-    scrollbar-width: auto;
+    scrollbar-width: none;
     max-width: 100%;
   }
   .tab {
     white-space: nowrap;
-  }
-  .input,
-  .select,
-  .textarea {
-    font-size: max(1rem, 1em);
-    min-block-size: 44px;
   }
   .input-icon {
     width: auto !important;
@@ -2685,15 +2247,6 @@ dialog.modal-dialog::backdrop {
   }
 
   /* Dialog → panel bawah, detail tugas → layar penuh */
-  dialog.modal-dialog[open],
-  dialog.modal-dialog.modal-lg[open],
-  dialog.modal-dialog.search-dialog[open] {
-    margin: auto 0 0 0;
-    width: 100%;
-    max-width: none;
-    max-height: 92dvh;
-    border-radius: 16px 16px 0 0;
-  }
   .overlay {
     place-items: end stretch;
     padding: 0;
@@ -2708,62 +2261,12 @@ dialog.modal-dialog::backdrop {
   .modal-foot {
     flex-wrap: wrap;
   }
-  .modal-foot .btn,
-  .modal-head > .icon-btn {
-    min-height: 44px;
-  }
-  .modal-head > .icon-btn {
-    min-width: 44px;
-    flex-shrink: 0;
-  }
-  .modal-body .input,
-  .modal-body .select,
-  .modal-body .textarea {
-    font-size: 16px;
-  }
-  .search-dialog-bar .icon-btn {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-  }
-  .search-dialog-bar .input {
-    min-height: 44px;
-    font-size: 16px;
-  }
   /* Urutan lapisan di ponsel: konten < navigasi bawah < laci/detail < dialog < menu < toast */
   .drawer {
     inset: 0;
     width: auto;
     border-radius: 0;
     z-index: 91;
-  }
-  .task-drawer {
-    top: var(--task-viewport-top, 0px);
-    bottom: auto;
-    height: var(--task-viewport-height, 100dvh);
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .task-drawer .detail-head {
-    flex-shrink: 0;
-  }
-  .task-drawer .detail-head .tabs {
-    overflow-x: auto;
-  }
-  .task-drawer .detail-head .tab,
-  .task-drawer .comment-box .btn,
-  .task-drawer .comment-box .input {
-    min-height: 44px;
-  }
-  .task-drawer .detail-head .tab {
-    flex-shrink: 0;
-  }
-  .task-drawer .task-drawer-close {
-    width: 44px;
-    height: 44px;
-  }
-  .task-drawer .comment-box .input {
-    font-size: 16px;
   }
   .drawer-overlay {
     z-index: 90;
@@ -2795,7 +2298,6 @@ dialog.modal-dialog::backdrop {
     right: 0;
     bottom: 0;
     top: auto;
-    margin: 0;
     max-width: none;
     width: auto;
     max-height: 75dvh;
@@ -2814,7 +2316,7 @@ dialog.modal-dialog::backdrop {
     background: var(--border-strong);
   }
   .ctx-menu.sheet .menu-item {
-    min-block-size: 46px;
+    height: 46px;
     font-size: var(--fs-body);
   }
   .ctx-menu.sheet .ctx-menu.sheet {
@@ -2822,10 +2324,8 @@ dialog.modal-dialog::backdrop {
   }
 
   /* Toast di atas navigasi bawah */
-  .toasts,
-  .toasts[popover] {
+  .toasts {
     bottom: calc(76px + env(safe-area-inset-bottom));
-    inset-block-end: calc(76px + env(safe-area-inset-bottom));
     width: calc(100vw - 24px);
   }
   .toast {
@@ -2966,19 +2466,15 @@ dialog.modal-dialog::backdrop {
   transform: scale(0.92);
 }
 
-/* Submenu proyek di sidebar muncul dengan efek pop */
+/* Ikon chevron sidebar berputar halus saat proyek dibuka/ditutup */
 .nav-sub {
-  animation: nav-pop 0.2s var(--ease);
-  transform-origin: top left;
+  animation: sub-in var(--dur) var(--ease);
+  transform-origin: top;
 }
-/* Menu sidebar yang dipilih: sorotan muncul dengan efek pop (tidak meluncur dari item sebelumnya) */
-.sidebar .nav-item.active {
-  animation: nav-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes nav-pop {
+@keyframes sub-in {
   from {
-    opacity: 0.4;
-    transform: scale(0.94);
+    opacity: 0;
+    transform: translateY(-4px);
   }
 }
 
@@ -3014,6 +2510,11 @@ dialog.modal-dialog::backdrop {
 .table tr.clickable td,
 .list-row.clickable {
   transition: background-color var(--dur-fast) var(--ease);
+}
+.col-body {
+  transition:
+    background-color var(--dur) var(--ease),
+    outline-color var(--dur) var(--ease);
 }
 
 /* Checkbox selesai: "pop" kecil saat dicentang */
@@ -3060,7 +2561,10 @@ svg circle {
   .content {
     view-transition-name: content;
   }
-  .content .tabs .tab.active {
+  .sidebar .nav-item.active {
+    view-transition-name: nav-active;
+  }
+  .tabs .tab.active {
     view-transition-name: tab-active;
   }
   .mobile-tabs .mobile-tab.active {
@@ -3095,6 +2599,7 @@ svg circle {
     transform: translateY(10px);
   }
 }
+::view-transition-group(nav-active),
 ::view-transition-group(tab-active),
 ::view-transition-group(mobile-tab-active),
 ::view-transition-group(bnav-active) {
@@ -3116,75 +2621,13 @@ svg circle {
 .drawer {
   animation: drawer-in 0.22s var(--ease);
 }
-@media (max-width: 768px) {
-  .task-drawer {
-    animation: fade-in var(--dur-fast) var(--ease);
-  }
-}
 @keyframes drawer-in {
   from {
     transform: translateX(32px);
     opacity: 0;
   }
 }
-dialog.modal-dialog {
-  opacity: 0;
-  transition-property: opacity, transform, display, overlay;
-  transition-duration: 0.2s;
-  transition-timing-function: var(--ease);
-  transition-behavior: allow-discrete;
-  @media (prefers-reduced-motion: no-preference) {
-    transform: translateY(8px) scale(0.98);
-  }
-}
-dialog.modal-dialog[open]:where(:not([data-closing])) {
-  opacity: 1;
-  @starting-style {
-    opacity: 0;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    transform: none;
-    @starting-style {
-      transform: translateY(8px) scale(0.98);
-    }
-  }
-}
-dialog.modal-dialog::backdrop {
-  background-color: transparent;
-  transition-property: background-color, display, overlay;
-  transition-duration: 0.2s;
-  transition-timing-function: var(--ease);
-  transition-behavior: allow-discrete;
-}
-dialog.modal-dialog[open]:where(:not([data-closing]))::backdrop {
-  background-color: var(--backdrop);
-  @starting-style {
-    background-color: transparent;
-  }
-}
-.popover[popover]:not(.ctx-menu) {
-  opacity: 0;
-  transition-property: opacity, transform, display, overlay;
-  transition-duration: 0.14s;
-  transition-timing-function: var(--ease);
-  transition-behavior: allow-discrete;
-  @media (prefers-reduced-motion: no-preference) {
-    transform: translateY(-4px) scale(0.98);
-  }
-}
-.popover[popover]:not(.ctx-menu):is(:popover-open, .\:popover-open):where(:not([data-closing])) {
-  opacity: 1;
-  @starting-style {
-    opacity: 0;
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    transform: none;
-    @starting-style {
-      transform: translateY(-4px) scale(0.98);
-    }
-  }
-}
-.popover:not([popover]):not(.ctx-menu) {
+.popover:not(.ctx-menu) {
   animation: pop-in var(--dur-fast) var(--ease);
   transform-origin: top;
 }
@@ -3238,72 +2681,13 @@ html.theme-anim *::after {
   ::view-transition-new(*) {
     animation: none !important;
   }
-  dialog.modal-dialog,
-  dialog.modal-dialog::backdrop,
-  .popover[popover] {
-    transition-duration: 0.08s;
-  }
-  progress.loading-spinner:indeterminate {
-    --_used-spinner-duration: 6s;
-    --progress-dash-animation: ;
-    --arc-end: 158deg;
-  }
-  :not(progress.loading-spinner),
-  :not(progress.loading-spinner)::before,
-  :not(progress.loading-spinner)::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-}
-
-/* --- Kontras tinggi & Forced Colors Mode (Windows High Contrast) --- */
-@media (prefers-contrast: more) {
-  :root {
-    --border: #71717a;
-    --border-strong: #3f3f46;
-    --text-faint: #52525b;
-  }
-  :root[data-theme='dark'] {
-    --border: #71717a;
-    --border-strong: #a1a1aa;
-    --text-faint: #d4d4d8;
-  }
-}
-@media (forced-colors: active) {
-  dialog.modal-dialog,
-  .popover,
-  .card,
-  .badge,
-  .btn,
-  .input,
-  .select,
-  .textarea {
-    border: 1px solid CanvasText;
-  }
-  .btn-primary,
-  .chip.active,
-  .task-check.checked {
-    background: Highlight;
-    color: HighlightText;
-    border-color: Highlight;
-  }
-  .switch span {
-    border: 1px solid ButtonText;
-  }
-  .switch span::before {
-    background: ButtonText;
-  }
-  .switch input:checked + span {
-    background: Highlight;
-    border-color: Highlight;
-  }
-  .switch input:checked + span::before {
-    background: HighlightText;
-  }
-  .tab.active {
-    border-bottom-color: Highlight;
   }
 }
 

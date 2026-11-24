@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -13,125 +13,6 @@ import {
   Megaphone,
 } from 'lucide-react';
 
-const supportsPopover = typeof HTMLElement !== 'undefined' && Object.hasOwn(HTMLElement.prototype, 'popover');
-const supportsAnchor =
-  typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('position-area: block-end');
-const supportsClosedBy = typeof HTMLDialogElement !== 'undefined' && 'closedBy' in HTMLDialogElement.prototype;
-
-let cachedDisplayTransition;
-function canTransitionDisplay() {
-  if (cachedDisplayTransition !== undefined) return cachedDisplayTransition;
-  if (
-    typeof window === 'undefined' ||
-    !window.CSS?.supports?.('transition-behavior', 'allow-discrete') ||
-    !document.body
-  ) {
-    return false;
-  }
-  const probe = document.createElement('div');
-  probe.style.cssText = 'transition: display 1s allow-discrete !important; display: block;';
-  document.body.appendChild(probe);
-  getComputedStyle(probe).display;
-  probe.style.display = 'none';
-  cachedDisplayTransition = getComputedStyle(probe).display === 'block';
-  probe.remove();
-  return cachedDisplayTransition;
-}
-
-function supportsTopLayerExit() {
-  return typeof window !== 'undefined' && !!window.CSS?.supports?.('overlay', 'auto') && canTransitionDisplay();
-}
-
-export function useModalDialog(onClose) {
-  const dialogRef = useRef(null);
-  const closingRef = useRef(false);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  const requestClose = useCallback(() => {
-    const dialog = dialogRef.current;
-    if (!dialog || !dialog.open || closingRef.current) return;
-    if (!supportsTopLayerExit()) {
-      closingRef.current = true;
-      dialog.setAttribute('data-closing', '');
-      const animations = dialog.getAnimations?.({ subtree: true }) ?? [];
-      const done =
-        animations.length > 0
-          ? Promise.race([
-              Promise.allSettled(animations.map((a) => a.finished)),
-              new Promise((r) => setTimeout(r, 400)),
-            ])
-          : Promise.resolve();
-      done.then(() => {
-        if (!dialog.hasAttribute('data-closing')) return;
-        dialog.removeAttribute('data-closing');
-        closingRef.current = false;
-        if (dialog.open) dialog.close();
-      });
-      return;
-    }
-    dialog.close();
-  }, []);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return undefined;
-    if (!dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        /* abaikan bila sudah terbuka */
-      }
-    }
-    const handleClose = () => {
-      closingRef.current = false;
-      dialog.removeAttribute('data-closing');
-      onCloseRef.current?.();
-    };
-    const handleCancel = (e) => {
-      if (!supportsTopLayerExit()) {
-        e.preventDefault();
-        requestClose();
-      }
-    };
-    dialog.addEventListener('close', handleClose);
-    dialog.addEventListener('cancel', handleCancel);
-
-    let cleanupBackdrop = () => {};
-    if (!supportsClosedBy) {
-      let pressedOutside = false;
-      const outside = (e) => {
-        const r = dialog.getBoundingClientRect();
-        return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
-      };
-      const onDown = (e) => {
-        pressedOutside = outside(e);
-      };
-      const onUp = (e) => {
-        if (pressedOutside && outside(e)) requestClose();
-        pressedOutside = false;
-      };
-      dialog.addEventListener('pointerdown', onDown);
-      dialog.addEventListener('pointerup', onUp);
-      cleanupBackdrop = () => {
-        dialog.removeEventListener('pointerdown', onDown);
-        dialog.removeEventListener('pointerup', onUp);
-      };
-    }
-
-    return () => {
-      dialog.removeEventListener('close', handleClose);
-      dialog.removeEventListener('cancel', handleCancel);
-      cleanupBackdrop();
-    };
-  }, [requestClose]);
-
-  return { dialogRef, requestClose };
-}
-
 // Foto profil bila ada (seperti prototipe Figma); bila tidak, inisial nama di atas warna akun.
 export function Avatar({ user, size = 24 }) {
   if (!user) return null;
@@ -144,8 +25,6 @@ export function Avatar({ user, size = 24 }) {
         title={user.name}
         width={size}
         height={size}
-        loading="lazy"
-        decoding="async"
         style={{ width: size, height: size }}
       />
     );
@@ -170,7 +49,7 @@ export function Avatar({ user, size = 24 }) {
 export function AvatarStack({ users = [], size = 24, max = 4 }) {
   const shown = users.slice(0, max);
   return (
-    <span className="avatar-stack" role="group" aria-label={users.map((u) => u.name).join(', ')}>
+    <span className="avatar-stack" aria-label={users.map((u) => u.name).join(', ')}>
       {shown.map((u) => (
         <Avatar key={u.id} user={u} size={size} />
       ))}
@@ -184,33 +63,31 @@ export function AvatarStack({ users = [], size = 24, max = 4 }) {
 }
 
 export function Modal({ title, subtitle, onClose, children, footer, size }) {
-  const titleId = useId();
-  const { dialogRef, requestClose } = useModalDialog(onClose);
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
-    <dialog
-      ref={dialogRef}
-      className={`modal-dialog ${size === 'lg' ? 'modal-lg' : ''}`}
-      aria-labelledby={titleId}
-      {...{ closedby: 'any' }}
-    >
-      <div className="modal-head">
-        <div>
-          <h2 id={titleId} className="modal-title">
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="muted sm" style={{ marginTop: 4 }}>
-              {subtitle}
-            </p>
-          )}
+    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={`modal ${size === 'lg' ? 'modal-lg' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="modal-head">
+          <div>
+            <div className="modal-title">{title}</div>
+            {subtitle && (
+              <p className="muted sm" style={{ marginTop: 4 }}>
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Tutup">
+            <X size={16} />
+          </button>
         </div>
-        <button type="button" className="icon-btn" onClick={requestClose} aria-label="Tutup">
-          <X size={16} />
-        </button>
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-foot">{footer}</div>}
       </div>
-      <div className="modal-body">{children}</div>
-      {footer && <div className="modal-foot">{footer}</div>}
-    </dialog>
+    </div>
   );
 }
 
@@ -222,17 +99,11 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Confirm', danger
       onClose={onClose}
       footer={
         <>
-          <button
-            type="button"
-            className={`btn ${onConfirm ? '' : 'btn-primary'}`}
-            autoFocus={!!danger || !onConfirm}
-            onClick={onClose}
-          >
+          <button className={`btn ${onConfirm ? '' : 'btn-primary'}`} onClick={onClose}>
             {onConfirm ? 'Cancel' : 'OK'}
           </button>
           {onConfirm && (
             <button
-              type="button"
               className={`btn ${danger ? 'btn-danger-solid' : 'btn-primary'}`}
               onClick={onConfirm}
               disabled={busy}
@@ -251,38 +122,13 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Confirm', danger
   );
 }
 
-export function Field({ label, error, children, hint, htmlFor, hintId: hintIdProp, errorId: errorIdProp }) {
-  const autoId = useId();
-  const hintId = hintIdProp || `${autoId}-hint`;
-  const errorId = errorIdProp || `${autoId}-error`;
-  const describedBy = [hint && !error ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined;
-
-  let content = children;
-  if (
-    isValidElement(children) &&
-    typeof children.type === 'string' &&
-    ['input', 'select', 'textarea'].includes(children.type)
-  ) {
-    content = cloneElement(children, {
-      'aria-invalid': children.props['aria-invalid'] ?? (error ? true : undefined),
-      'aria-describedby': children.props['aria-describedby'] ?? describedBy,
-    });
-  }
-
+export function Field({ label, error, children, hint, htmlFor }) {
   return (
     <div className="field">
       {label && <label htmlFor={htmlFor}>{label}</label>}
-      {content}
-      {hint && !error && (
-        <span id={hintId} className="xs muted">
-          {hint}
-        </span>
-      )}
-      {error && (
-        <span id={errorId} className="field-error" role="alert">
-          {error}
-        </span>
-      )}
+      {children}
+      {hint && !error && <span className="xs muted">{hint}</span>}
+      {error && <span className="field-error">{error}</span>}
     </div>
   );
 }
@@ -331,7 +177,7 @@ export function ErrorState({ error, onRetry }) {
       title="Gagal memuat data"
       action={
         onRetry && (
-          <button type="button" className="btn" onClick={onRetry}>
+          <button className="btn" onClick={onRetry}>
             <RotateCw size={14} />
             Coba lagi
           </button>
@@ -343,84 +189,46 @@ export function ErrorState({ error, onRetry }) {
   );
 }
 
-// Menu dropdown yang tertutup saat klik di luar atau Esc. Menggunakan Popover API (Top Layer)
-// + CSS Anchor Positioning (dengan fallback koordinat JS untuk browser tanpa position-area) agar
-// tetap tampil di atas <dialog> modal dan otomatis membalik arah di tepi layar.
+// Menu dropdown yang tertutup saat klik di luar atau Esc. Popover dirender lewat portal
+// dengan posisi fixed, lalu dibalik ke atas bila ruang di bawah tidak cukup (mis. menu akun
+// di dasar sidebar) dan digeser agar tidak keluar layar.
 export function Menu({ trigger, children, align = 'right', width }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const popRef = useRef(null);
   const [pos, setPos] = useState(null);
-  const popId = useId();
-  const anchorName = `--menu-${popId.replace(/:/g, '')}`;
-
-  const closeMenu = useCallback(() => {
-    setOpen(false);
-  }, []);
-
-  const toggle = useCallback(() => {
-    setPos(null);
-    setOpen((o) => !o);
-  }, []);
 
   useEffect(() => {
-    if (!supportsPopover) return undefined;
-    const pop = popRef.current;
-    if (!pop) return undefined;
-    const onToggle = (e) => {
-      const next = e.newState === 'open';
-      setOpen(next);
-      if (!next) {
-        const triggerEl = ref.current;
-        if (pop.contains(document.activeElement) || document.activeElement === document.body) {
-          triggerEl?.querySelector('button, [href], input, select')?.focus({ preventScroll: true });
-        }
-      }
-    };
-    pop.addEventListener('toggle', onToggle);
-    return () => pop.removeEventListener('toggle', onToggle);
-  }, []);
-
-  useEffect(() => {
-    if (supportsPopover && popRef.current) {
-      try {
-        if (open && !popRef.current.matches(':popover-open')) popRef.current.showPopover();
-        else if (!open && popRef.current.matches(':popover-open')) popRef.current.hidePopover();
-      } catch {
-        /* abaikan bila status popover berubah di tengah render */
-      }
-    }
     if (!open) return undefined;
-    const triggerWrap = ref.current;
+    const trigger = ref.current;
     const pop = popRef.current;
+    const close = (e) => !ref.current?.contains(e.target) && !popRef.current?.contains(e.target) && setOpen(false);
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      ref.current?.querySelector('button, [href], input, select')?.focus(); // fokus kembali ke pemicu
+    };
+    // Aksesibilitas: popover dirender di akhir <body>, jadi fokus dipindah ke isi menu agar
+    // Tab/Enter langsung bekerja di dalamnya.
     const focusTimer = setTimeout(() =>
       popRef.current
         ?.querySelector('button:not(:disabled), [href], input, select, textarea')
         ?.focus({ preventScroll: true }),
     );
-    if (supportsPopover) {
-      return () => clearTimeout(focusTimer);
-    }
-    const close = (e) => !ref.current?.contains(e.target) && !popRef.current?.contains(e.target) && setOpen(false);
-    const onKey = (e) => {
-      if (e.key !== 'Escape') return;
-      setOpen(false);
-      ref.current?.querySelector('button, [href], input, select')?.focus();
-    };
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', onKey);
     return () => {
       clearTimeout(focusTimer);
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', onKey);
-      if (pop?.contains(document.activeElement) || document.activeElement === document.body) {
-        triggerWrap?.querySelector('button, [href], input, select')?.focus({ preventScroll: true });
-      }
+      // Bila fokus masih di dalam menu saat ditutup (mis. memilih item), kembalikan ke pemicu.
+      if (pop?.contains(document.activeElement) || document.activeElement === document.body)
+        trigger?.querySelector('button, [href], input, select')?.focus({ preventScroll: true });
     };
   }, [open]);
 
   useLayoutEffect(() => {
-    if (!open || (supportsPopover && supportsAnchor)) return undefined;
+    if (!open) return undefined;
     const place = () => {
       const r = ref.current?.getBoundingClientRect();
       const pop = popRef.current;
@@ -444,56 +252,34 @@ export function Menu({ trigger, children, align = 'right', width }) {
     };
   }, [open, align, width]);
 
-  const anchorBoxStyle =
-    supportsPopover && supportsAnchor
-      ? {
-          positionAnchor: anchorName,
-          width: width === '100%' ? 'anchor-size(width)' : width,
-        }
-      : {
-          position: 'fixed',
-          left: pos?.left ?? -9999,
-          top: pos?.top ?? 0,
-          width: pos?.width ?? (width === '100%' ? undefined : width),
-          visibility: pos ? 'visible' : 'hidden',
-        };
-
   return (
-    <span
-      ref={ref}
-      style={{
-        position: 'relative',
-        display: 'inline-flex',
-        ...(supportsPopover && supportsAnchor ? { anchorName } : {}),
-      }}
-    >
-      {trigger({ open, toggle })}
-      {supportsPopover ? (
-        <div
-          id={popId}
-          ref={popRef}
-          className={`popover ${supportsAnchor ? `popover-anchored align-${align}` : ''}`}
-          style={anchorBoxStyle}
-          onClick={(e) => e.target.closest('.menu-item') && closeMenu()}
-          {...{ popover: 'auto' }}
-        >
-          {open && children}
-        </div>
-      ) : (
-        open &&
+    <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
+      {trigger({
+        open,
+        toggle: () => {
+          setPos(null);
+          setOpen((o) => !o);
+        },
+      })}
+      {open &&
         createPortal(
           <div
-            id={popId}
             ref={popRef}
             className="popover"
-            style={anchorBoxStyle}
-            onClick={(e) => e.target.closest('.menu-item') && closeMenu()}
+            role="menu"
+            style={{
+              position: 'fixed',
+              left: pos?.left ?? -9999,
+              top: pos?.top ?? 0,
+              width: pos?.width ?? (width === '100%' ? undefined : width),
+              visibility: pos ? 'visible' : 'hidden',
+            }}
+            onClick={(e) => e.target.closest('.menu-item') && setOpen(false)}
           >
             {children}
           </div>,
           document.body,
-        )
-      )}
+        )}
     </span>
   );
 }
@@ -503,33 +289,35 @@ export function Switch({ checked, onChange, disabled, label }) {
     <label className="switch">
       <input
         type="checkbox"
-        role="switch"
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
         aria-label={label}
-        {...{ switch: '' }}
       />
-      <span aria-hidden="true" />
+      <span />
     </label>
   );
 }
 
 export function ProgressRing({ percent = 0, size = 34, color = 'var(--primary)' }) {
-  const clamped = Math.max(0, Math.min(100, Number(percent) || 0));
+  const r = (size - 5) / 2;
+  const c = 2 * Math.PI * r;
   return (
-    <progress
-      className="progress-ring"
-      value={clamped}
-      max={100}
-      aria-label={`Progres ${clamped}%`}
-      aria-valuetext={`${clamped}%`}
-      style={{
-        '--size': `${size}px`,
-        '--fill-color': color,
-        '--value': clamped,
-      }}
-    />
+    <svg className="ring" width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={`${percent}%`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bg-muted)" strokeWidth="3" />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c - (c * percent) / 100}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </svg>
   );
 }
 
@@ -549,7 +337,7 @@ export function ProjectMark({ project, size = 18 }) {
     <span
       className="project-dot"
       style={{ width: size, height: size, background: project?.color || 'var(--primary)', borderRadius: size * 0.28 }}
-      aria-hidden="true"
+      aria-hidden
     >
       <Icon size={Math.round(size * 0.6)} strokeWidth={2.4} color="#fff" />
     </span>
