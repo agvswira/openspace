@@ -38,6 +38,16 @@ export function ThemeProvider({ children }) {
     syncDocumentTheme(theme, resolved);
   }, [theme, resolved]);
 
+  // Tema diganti di jendela lain dengan origin sama (tab lain, atau demo di landing page):
+  // ikuti pilihan itu di sini juga.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY || e.key === null) setThemeState(readStored());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   useEffect(() => {
     const mq = media();
     const onMediaChange = () => setSystemTheme(mq.matches ? 'dark' : 'light');

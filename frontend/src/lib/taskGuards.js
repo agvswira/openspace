@@ -6,8 +6,6 @@ import { addDays, diffDays, startOfDay } from './format.js';
 export function deleteBlocker(task) {
   if (task.dependents?.length)
     return `Tugas ini menjadi prasyarat bagi: ${task.dependents.map((d) => d.title).join(', ')}. Hapus hubungan prasyarat terlebih dahulu.`;
-  if (task.fromMeeting)
-    return `Tugas ini berasal dari action item rapat "${task.fromMeeting.title}" dan tidak dapat dihapus langsung.`;
   return null;
 }
 

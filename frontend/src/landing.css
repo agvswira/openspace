@@ -769,3 +769,20 @@
     transition: none;
   }
 }
+
+/* Label kehadiran rapat pada kartu fitur */
+.lp-att {
+  margin-left: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.lp-att-present {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+.lp-att-late {
+  background: rgba(249, 115, 22, 0.15);
+  color: #ea580c;
+}

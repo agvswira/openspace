@@ -13,7 +13,6 @@ import {
   Users,
   Settings,
   Search,
-  Share2,
   Bell,
   ChevronLeft,
   ChevronsUpDown,
@@ -24,7 +23,6 @@ import {
   CircleUser,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
 import { useProjects, useProject, useSummary } from '../../api/hooks';
 import { Avatar, Menu, ProjectMark } from '../ui';
 import SearchDialog from './SearchDialog';
@@ -186,9 +184,8 @@ function Sidebar({ onSearch, onNewProject, open, onClose }) {
   );
 }
 
-function Topbar({ onInvite, onMenu }) {
+function Topbar({ onMenu }) {
   const { user, workspace } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const match = useMatch('/projects/:projectId/*');
@@ -247,21 +244,6 @@ function Topbar({ onInvite, onMenu }) {
         {crumbs}
       </nav>
       <div className="topbar-actions">
-        {/* Di proyek: undang anggota (Owner). Di halaman workspace: salin tautan halaman. */}
-        {(!match || project?.access?.isOwner) && (
-          <button
-            className="icon-btn"
-            onClick={() => {
-              if (match) return onInvite();
-              navigator.clipboard?.writeText(window.location.href);
-              toast('Tautan halaman disalin');
-            }}
-            aria-label={match ? 'Bagikan proyek' : 'Salin tautan halaman'}
-            title={match ? 'Share project' : 'Copy link'}
-          >
-            <Share2 size={16} />
-          </button>
-        )}
         <ThemeToggleButton />
         <NotificationsMenu
           trigger={({ toggle, unread }) => (
@@ -414,7 +396,7 @@ export default function AppLayout() {
       />
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} />}
       <div className="main" inert={navOpen || undefined}>
-        <Topbar onInvite={() => setInvite(true)} onMenu={() => setNavOpen(true)} />
+        <Topbar onMenu={() => setNavOpen(true)} />
         {match && <ProjectTabs projectId={match.params.projectId} />}
         <main id="main-content" className="content" tabIndex={-1}>
           <Outlet context={{ openNewProject: () => setNewProject(true), openInvite: () => setInvite(true) }} />

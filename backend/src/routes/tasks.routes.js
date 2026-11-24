@@ -13,7 +13,7 @@ export const projectTasksRouter = Router({ mergeParams: true });
 // /api/tasks/:taskId/...
 export const tasksRouter = Router();
 
-const STATUS = ['TODO', 'IN_PROGRESS', 'DONE'];
+const STATUS = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 const PRIORITY = ['LOW', 'MEDIUM', 'HIGH'];
 
 const taskBase = z.object({
@@ -42,6 +42,17 @@ async function assertProjectRefs(projectId, { assigneeIds, milestoneId }) {
     if (!ms) throw badRequest('Milestone tidak ditemukan pada proyek ini.');
   }
 }
+
+const ONLY_OWNER_DONE =
+  'Hanya Owner yang dapat menandai tugas Done. Kirim tugas ke In review agar Owner memeriksa dan menyetujuinya.';
+
+// Owner proyek menjadi pemeriksa tugas yang dikirim ke In review.
+async function projectOwnerIds(projectId) {
+  const owners = await prisma.projectMember.findMany({ where: { projectId, role: { isOwner: true } } });
+  return owners.map((m) => m.userId);
+}
+
+const taskLink = (task) => `/projects/${task.projectId}/tasks?task=${task.id}`;
 
 async function loadTask(taskId) {
   const task = await prisma.task.findUnique({ where: { id: taskId }, include: taskInclude });
@@ -76,6 +87,7 @@ projectTasksRouter.post(
   async (req, res) => {
     const { projectId } = req.params;
     const { assigneeIds = [], ...data } = req.body;
+    if (data.status === 'DONE' && !req.access.isOwner) throw forbidden(ONLY_OWNER_DONE);
     await assertProjectRefs(projectId, { assigneeIds, milestoneId: data.milestoneId });
 
     const task = await prisma.$transaction(async (tx) => {
@@ -129,6 +141,11 @@ tasksRouter.patch('/:taskId', validate(updateSchema), async (req, res) => {
   }
 
   if (changes.status && changes.status !== task.status) {
+    // Alur review: hanya Owner yang boleh menyetujui (Done) atau membuka kembali tugas yang sudah disetujui.
+    if (changes.status === 'DONE' && !access.isOwner) throw forbidden(ONLY_OWNER_DONE);
+    if (task.status === 'DONE' && !access.isOwner) {
+      throw forbidden('Tugas ini sudah disetujui Owner. Hanya Owner yang dapat membukanya kembali.');
+    }
     // Tugas terhambat tidak dapat dimulai atau diselesaikan.
     if (changes.status !== 'TODO' && isBlocked(task)) {
       const waits = task.prerequisites.filter((p) => p.prerequisite.status !== 'DONE').map((p) => p.prerequisite.title);
@@ -161,6 +178,19 @@ tasksRouter.patch('/:taskId', validate(updateSchema), async (req, res) => {
     return tx.task.update({ where: { id: task.id }, data, include: taskInclude });
   });
 
+  if (changes.status === 'IN_REVIEW' && task.status !== 'IN_REVIEW') {
+    await notify(
+      await projectOwnerIds(task.projectId),
+      {
+        type: 'review',
+        title: `Minta review: ${updated.title}`,
+        body: `${req.user.name} · ${access.project.name}`,
+        link: taskLink(task),
+      },
+      req.user.id,
+    );
+  }
+
   if (assigneeIds) {
     const before = new Set(task.assignees.map((a) => a.userId));
     await notify(
@@ -186,14 +216,61 @@ tasksRouter.delete('/:taskId', async (req, res) => {
       `Tugas ini menjadi prasyarat bagi: ${task.dependents.map((d) => d.task.title).join(', ')}. Hapus hubungan prasyarat terlebih dahulu.`,
     );
   }
-  if (task.actionItem) {
-    throw conflict(
-      `Tugas ini berasal dari action item rapat "${task.actionItem.meeting.title}" dan tidak dapat dihapus langsung.`,
-    );
-  }
-  await prisma.task.delete({ where: { id: task.id } });
+  // Action item tidak lagi ditampilkan di Meetings, jadi tautannya dilepas lalu tugas dihapus.
+  await prisma.$transaction(async (tx) => {
+    if (task.actionItem) await tx.actionItem.update({ where: { id: task.actionItem.id }, data: { taskId: null } });
+    await tx.task.delete({ where: { id: task.id } });
+  });
   res.status(204).end();
 });
+
+// ---------- Review oleh Owner ----------
+// Owner menyetujui tugas In review (menjadi Done) atau mengembalikannya ke In progress dengan catatan.
+tasksRouter.post(
+  '/:taskId/review',
+  validate(
+    z.object({
+      decision: z.enum(['approve', 'reject']),
+      note: z.string().trim().max(2000).optional().nullable(),
+    }),
+  ),
+  async (req, res) => {
+    const { task, access } = await taskContext(req);
+    if (!access.isOwner) throw forbidden('Hanya Owner proyek yang dapat mereview tugas.');
+    if (task.status !== 'IN_REVIEW') throw conflict('Tugas ini tidak sedang menunggu review.');
+    const approve = req.body.decision === 'approve';
+    const note = req.body.note || null;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (note) {
+        await tx.taskComment.create({
+          data: {
+            taskId: task.id,
+            authorId: req.user.id,
+            body: `${approve ? 'Disetujui' : 'Perlu revisi'}: ${note}`,
+          },
+        });
+      }
+      return tx.task.update({
+        where: { id: task.id },
+        data: approve ? { status: 'DONE', completedAt: new Date() } : { status: 'IN_PROGRESS', completedAt: null },
+        include: taskInclude,
+      });
+    });
+
+    await notify(
+      task.assignees.map((a) => a.userId),
+      {
+        type: 'review',
+        title: approve ? `Disetujui: ${task.title}` : `Perlu revisi: ${task.title}`,
+        body: note ? `${req.user.name}: ${note.slice(0, 80)}` : `${req.user.name} · ${access.project.name}`,
+        link: taskLink(task),
+      },
+      req.user.id,
+    );
+    res.json(serializeTask(updated));
+  },
+);
 
 // ---------- Prasyarat (FR-08) ----------
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { UserPlus, Plus, ArrowRight, Users, CalendarDays, CircleDot } from 'lucide-react';
+import { Link, useOutletContext } from 'react-router-dom';
+import { Plus, ArrowRight, Users, CalendarDays, CircleDot } from 'lucide-react';
 import { useMyTasks, useProjects, useSummary } from '../api/hooks';
 import { useAuth } from '../context/AuthContext';
 import { AvatarStack, ErrorState, LoadingBlock, ProgressRing, ProjectMark } from '../components/ui';
@@ -15,7 +15,6 @@ const PROJECT_STATUS = { TODO: 'TODO', IN_PROGRESS: 'IN_PROGRESS', DONE: 'DONE' 
 export default function Home() {
   const { user } = useAuth();
   const { openNewProject } = useOutletContext();
-  const navigate = useNavigate();
   const projects = useProjects();
   const myTasks = useMyTasks('open');
   const completed = useMyTasks('completed');
@@ -48,12 +47,6 @@ export default function Home() {
           </p>
         </div>
         <div className="row">
-          {projects.data?.[0] && (
-            <button className="btn" onClick={() => navigate(`/projects/${projects.data[0].id}/members`)}>
-              <UserPlus size={15} />
-              Invite people
-            </button>
-          )}
           <button className="btn btn-primary" onClick={openNewProject}>
             <Plus size={15} />
             New project

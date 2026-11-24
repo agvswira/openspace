@@ -22,9 +22,10 @@ const queryClient = new QueryClient({
 const router = createBrowserRouter([{ path: '*', element: <App /> }], IS_DEMO ? { basename: DEMO_BASE } : undefined);
 const withBase = (path) => (IS_DEMO && path.startsWith('/') ? DEMO_BASE + path : path);
 
-// Setiap perpindahan halaman (path berubah) atau ganti tampilan tugas (?view=) memakai transisi
-// halus. Perubahan kecil seperti membuka panel detail (?task=) tidak, karena panel punya animasi
-// sendiri. Dilewati bila browser tidak mendukung atau pengguna memilih "kurangi animasi".
+// Perpindahan halaman (path berubah) memakai crossfade singkat. Ganti tampilan tugas (?view=)
+// dan perubahan kecil seperti membuka panel detail (?task=) tidak, karena cukup area tampilannya
+// saja yang memudar (lihat .view-swap). Dilewati bila browser tidak mendukung atau pengguna
+// memilih "kurangi animasi".
 const baseNavigate = router.navigate.bind(router);
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -45,7 +46,7 @@ router.navigate = (to, opts) => {
   if (typeof to === 'number' || !document.startViewTransition || reduceMotion()) return baseNavigate(to, opts);
   const next = new URL(withBase(typeof to === 'string' ? to : createPath(to ?? {})), window.location.href);
   const cur = new URL(window.location.href);
-  const bigChange = next.pathname !== cur.pathname || next.searchParams.get('view') !== cur.searchParams.get('view');
+  const bigChange = next.pathname !== cur.pathname;
   return baseNavigate(to, bigChange ? { viewTransition: true, ...opts } : opts);
 };
 

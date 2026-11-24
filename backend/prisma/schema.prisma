@@ -13,6 +13,7 @@ datasource db {
 enum TaskStatus {
   TODO
   IN_PROGRESS
+  IN_REVIEW
   DONE
 }
 
@@ -31,28 +32,28 @@ enum InvitationStatus {
 // ---------- Akun dan workspace ----------
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  title        String?
-  avatarColor  String   @default("#2563EB")
-  avatarUrl    String?
-  notifyAssign Boolean  @default(true)
-  notifyComment Boolean @default(true)
-  notifyDeadline Boolean @default(true)
-  createdAt    DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  title          String?
+  avatarColor    String   @default("#2563EB")
+  avatarUrl      String?
+  notifyAssign   Boolean  @default(true)
+  notifyComment  Boolean  @default(true)
+  notifyDeadline Boolean  @default(true)
+  createdAt      DateTime @default(now())
 
-  workspaces      Workspace[]           @relation("WorkspaceOwner")
+  workspaces      Workspace[]          @relation("WorkspaceOwner")
   memberships     ProjectMember[]
-  ownedProjects   Project[]             @relation("ProjectOwner")
+  ownedProjects   Project[]            @relation("ProjectOwner")
   assignments     TaskAssignee[]
   comments        TaskComment[]
   links           TaskLink[]
   notifications   Notification[]
   resetTokens     PasswordResetToken[]
   meetingSeats    MeetingParticipant[]
-  ownedMilestones Milestone[]           @relation("MilestoneOwner")
+  ownedMilestones Milestone[]          @relation("MilestoneOwner")
   actionItems     ActionItem[]
 }
 
@@ -102,15 +103,15 @@ model Project {
 }
 
 model ProjectMember {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roleId    String
-  role      Role     @relation(fields: [roleId], references: [id])
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id])
   lastActiveAt DateTime @default(now())
-  joinedAt  DateTime @default(now())
+  joinedAt     DateTime @default(now())
 
   @@unique([projectId, userId])
 }
@@ -267,11 +268,20 @@ model Meeting {
   createdAt    DateTime             @default(now())
 }
 
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  EXCUSED
+  ABSENT
+}
+
 model MeetingParticipant {
-  meetingId String
-  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meetingId  String
+  meeting    Meeting           @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Kosong = kehadiran belum dicatat
+  attendance AttendanceStatus?
 
   @@id([meetingId, userId])
 }

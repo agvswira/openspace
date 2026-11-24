@@ -197,7 +197,7 @@ router.get('/:projectId/overview', projectAccess(), async (req, res) => {
   const weekAgo = new Date(today.getTime() - 7 * 864e5);
   const tomorrowEnd = new Date(today.getTime() + 2 * 864e5);
 
-  const byStatus = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
+  const byStatus = { TODO: 0, IN_PROGRESS: 0, IN_REVIEW: 0, DONE: 0 };
   tasks.forEach((t) => byStatus[t.status]++);
 
   const nextMilestone = milestones

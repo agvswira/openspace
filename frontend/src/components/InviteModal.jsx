@@ -32,7 +32,7 @@ export default function InviteModal({ projectId, onClose }) {
 
   return (
     <Modal
-      title="Share project"
+      title="Invite members"
       subtitle="Invite people by email. They join with the role you choose."
       onClose={onClose}
     >

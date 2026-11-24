@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Calendar, Paperclip, MessageCircle, Lock } from 'lucide-react';
 import { AvatarStack } from '../ui';
 import { MoreButton, useMenuBinder } from '../ui/ContextMenu';
-import { STATUS, STATUS_ORDER, PriorityFlag, StatusIcon } from '../../lib/status';
+import { STATUS, STATUS_ORDER, PriorityFlag, StatusIcon, reviewDenied } from '../../lib/status';
 import { fmtShort } from '../../lib/format';
 import QuickAdd from './QuickAdd';
 
@@ -96,14 +96,14 @@ export function TaskCard({ task, onOpen, menuFor, draggable, onDragStart, onDrag
 
 // Tugas yang masih menunggu prasyarat tidak boleh dimulai atau diselesaikan (aturan yang sama
 // dengan backend), jadi kolom tujuan itu ditolak sejak kartu diseret, lengkap dengan alasannya.
-const deniedReason = (task, status) =>
+const deniedReason = (task, status, isOwner) =>
   task && task.status !== status && status !== 'TODO' && task.isBlocked && task.status !== 'DONE'
     ? `Menunggu ${task.waitingFor.map((w) => w.title).join(', ')}. Selesaikan prasyarat dulu.`
-    : null;
+    : reviewDenied(task, status, isOwner);
 
 // Board: tugas per status. Kartu dapat diseret antar kolom untuk mengubah status;
 // seluruh kolom (judul, kartu, dan ruang kosong di bawahnya) menjadi area jatuh.
-export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, menuFor, onQuickAdd }) {
+export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, menuFor, onQuickAdd, isOwner }) {
   const [dragId, setDragId] = useState(null);
   const [over, setOver] = useState(null);
   const bind = useMenuBinder();
@@ -117,12 +117,14 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
     <div className="board">
       {STATUS_ORDER.map((status) => {
         const items = tasks.filter((t) => t.status === status);
+        // Tugas baru tidak bisa langsung dibuat sebagai Done kecuali oleh Owner.
+        const canAdd = canCreate && (status !== 'DONE' || isOwner);
         // Klik kanan di area kosong kolom: buat tugas baru di kolom ini.
         const colMenu = bind(
-          canCreate &&
+          canAdd &&
             (() => [{ label: `New task in ${STATUS[status].label}…`, icon: Plus, onSelect: () => onCreate(status) }]),
         );
-        const denied = deniedReason(dragTask, status);
+        const denied = deniedReason(dragTask, status, isOwner);
         const isOver = over === status && dragTask && dragTask.status !== status;
         return (
           <section
@@ -152,7 +154,7 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
               <StatusIcon status={status} />
               {STATUS[status].label}
               <span className="n">{items.length}</span>
-              {canCreate && (
+              {canAdd && (
                 <button
                   className="icon-btn"
                   aria-label={`Tambah tugas ${STATUS[status].label}`}
@@ -191,7 +193,7 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
                   No tasks
                 </p>
               )}
-              {onQuickAdd && <QuickAdd onSubmit={(title) => onQuickAdd(status, title)} />}
+              {onQuickAdd && canAdd && <QuickAdd onSubmit={(title) => onQuickAdd(status, title)} />}
             </div>
           </section>
         );
