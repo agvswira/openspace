@@ -58,9 +58,17 @@ export default function TaskRow({ task, showMilestone = false, showMenu = false 
       </button>
       <div className="grow" style={{ minWidth: 0 }}>
         <div className={`row ${showMilestone ? '' : 'task-row-inline'}`} style={{ gap: showMilestone ? 0 : 10 }}>
-          <span className={`sm truncate ${done ? 'task-done-title' : ''}`} style={{ fontWeight: 500 }}>
+          <button
+            type="button"
+            className={`task-title-btn sm truncate ${done ? 'task-done-title' : ''}`}
+            style={{ fontWeight: 500 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              open();
+            }}
+          >
             {task.title}
-          </span>
+          </button>
           {!showMilestone && (
             <span className="xs muted row truncate" style={{ gap: 5 }}>
               <ProjectMark project={task.project} size={14} />

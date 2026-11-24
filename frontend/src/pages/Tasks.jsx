@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, lazy, useId, useState } from 'react';
 import { useParams, useSearchParams, useOutletContext } from 'react-router-dom';
 import { Kanban, List, Calendar, GanttChart, Search, SlidersHorizontal, Plus, UserPlus, X, Eye } from 'lucide-react';
 import { api, errorMessage } from '../api/client';
@@ -9,11 +9,12 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BoardView from '../components/tasks/BoardView';
 import ListView from '../components/tasks/ListView';
-import CalendarView from '../components/tasks/CalendarView';
-import TimelineView from '../components/tasks/TimelineView';
 import TaskFormModal from '../components/tasks/TaskFormModal';
 import TaskDetailPanel, { useCan } from '../components/tasks/TaskDetailPanel';
 import { useTaskActions } from '../components/tasks/taskActions';
+
+const CalendarView = lazy(() => import('../components/tasks/CalendarView'));
+const TimelineView = lazy(() => import('../components/tasks/TimelineView'));
 
 const VIEWS = [
   { key: 'board', label: 'Board', Icon: Kanban },
@@ -101,6 +102,21 @@ export default function Tasks() {
     bulk: actions,
   };
 
+  const tabBaseId = useId();
+  const onViewTabKeyDown = (e) => {
+    const idx = VIEWS.findIndex((v) => v.key === view);
+    let next = -1;
+    if (e.key === 'ArrowRight') next = (idx + 1) % VIEWS.length;
+    else if (e.key === 'ArrowLeft') next = (idx - 1 + VIEWS.length) % VIEWS.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = VIEWS.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    const nextKey = VIEWS[next].key;
+    setParam('view', nextKey === 'board' ? '' : nextKey);
+    document.getElementById(`${tabBaseId}-tab-${nextKey}`)?.focus();
+  };
+
   return (
     <div className="page-wide">
       <div className="page-head" style={{ marginBottom: 12 }}>
@@ -113,13 +129,13 @@ export default function Tasks() {
         <div className="row">
           <AvatarStack users={project?.members ?? []} size={28} />
           {project?.access?.isOwner && (
-            <button className="btn" onClick={openInvite}>
+            <button type="button" className="btn" onClick={openInvite}>
               <UserPlus size={15} />
               Invite
             </button>
           )}
           {canCreate && (
-            <button className="btn btn-primary desktop-only" onClick={() => setCreating('TODO')}>
+            <button type="button" className="btn btn-primary desktop-only" onClick={() => setCreating('TODO')}>
               <Plus size={15} />
               New task
             </button>
@@ -128,12 +144,22 @@ export default function Tasks() {
       </div>
 
       <div className="row-between" style={{ borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
-        <div className="tabs" style={{ border: 'none' }} role="tablist">
+        <div
+          className="tabs"
+          style={{ border: 'none' }}
+          role="tablist"
+          aria-label="Tampilan tugas"
+          onKeyDown={onViewTabKeyDown}
+        >
           {VIEWS.map(({ key, label, Icon }) => (
             <button
+              type="button"
               key={key}
+              id={`${tabBaseId}-tab-${key}`}
               role="tab"
               aria-selected={view === key}
+              aria-controls={`${tabBaseId}-panel`}
+              tabIndex={view === key ? 0 : -1}
               className={`tab ${view === key ? 'active' : ''}`}
               onClick={() => setParam('view', key === 'board' ? '' : key)}
             >
@@ -142,12 +168,16 @@ export default function Tasks() {
             </button>
           ))}
         </div>
-        <div className="row" style={{ paddingBottom: 6 }}>
+        <search className="row" style={{ paddingBottom: 6 }}>
           <div className="input-icon" style={{ width: 220 }}>
-            <Search size={14} />
+            <Search size={14} aria-hidden="true" />
             <input
+              type="search"
+              name="task-search"
+              spellCheck={false}
+              enterKeyHint="search"
               className="input"
-              style={{ height: 32 }}
+              style={{ minBlockSize: 32 }}
               placeholder="Search tasks..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -211,7 +241,7 @@ export default function Tasks() {
               )}
             </div>
           </Menu>
-        </div>
+        </search>
       </div>
 
       {tasksQ.isLoading ? (
@@ -262,11 +292,19 @@ export default function Tasks() {
             </div>
           )}
           {/* key = view: tampilan baru masuk dengan transisi halus saat tab diganti */}
-          <div key={view} className="view-swap">
-            {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
-            {view === 'list' && <ListView {...viewProps} />}
-            {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
-            {view === 'timeline' && <TimelineView {...viewProps} milestones={milestones} />}
+          <div
+            key={view}
+            id={`${tabBaseId}-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabBaseId}-tab-${view}`}
+            className="view-swap"
+          >
+            <Suspense fallback={<LoadingBlock rows={4} height={90} />}>
+              {view === 'board' && <BoardView {...viewProps} onMove={onMove} />}
+              {view === 'list' && <ListView {...viewProps} />}
+              {view === 'calendar' && <CalendarView {...viewProps} meetings={meetings} milestones={milestones} />}
+              {view === 'timeline' && <TimelineView {...viewProps} milestones={milestones} />}
+            </Suspense>
           </div>
         </div>
       )}
