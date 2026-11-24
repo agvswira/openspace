@@ -42,9 +42,9 @@ export function ThemeProvider({ children }) {
     const mq = media();
     const onMediaChange = () => setSystemTheme(mq.matches ? 'dark' : 'light');
     mq.addEventListener('change', onMediaChange);
+    // Tema diganti di tab lain atau demo di landing page (origin sama): ikuti pilihan itu juga.
     const onStorage = (e) => {
-      if (e.key !== STORAGE_KEY) return;
-      setThemeState(e.newValue === 'light' || e.newValue === 'dark' ? e.newValue : 'system');
+      if (e.key === STORAGE_KEY || e.key === null) setThemeState(readStored());
     };
     window.addEventListener('storage', onStorage);
     return () => {

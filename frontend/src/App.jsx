@@ -8,6 +8,7 @@ const SignUp = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.
 const ForgotPassword = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.ResetPassword })));
 const AcceptInvite = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.AcceptInvite })));
+const Landing = lazy(() => import('./pages/Landing'));
 const Home = lazy(() => import('./pages/Home'));
 const MyTasks = lazy(() => import('./pages/MyTasks'));
 const Overview = lazy(() => import('./pages/Overview'));
@@ -28,11 +29,13 @@ function PageLoader() {
   );
 }
 
-// Rute yang memerlukan login; pengunjung diarahkan ke halaman Sign in.
+// Rute yang memerlukan login. Pengunjung yang membuka "/" melihat landing page;
+// halaman lain mengarahkan ke Sign in.
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <PageLoader />;
+  if (!user && location.pathname === '/') return <Landing />;
   if (!user) return <Navigate to="/signin" replace state={{ from: location.pathname + location.search }} />;
   return children;
 }
@@ -63,6 +66,7 @@ export default function App() {
             </GuestOnly>
           }
         />
+        <Route path="/welcome" element={<Landing />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/invite/:token" element={<AcceptInvite />} />

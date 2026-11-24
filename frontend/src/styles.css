@@ -71,6 +71,7 @@
   --overdue-border: #fecaca;
   --blocked-border: #fde68a;
   --dep-line: #d97706;
+  --dep-line-done: #7c8aa0;
   --tl-today: rgba(37, 99, 235, 0.06);
   color-scheme: light dark;
 
@@ -204,6 +205,7 @@
   --overdue-border: rgba(239, 68, 68, 0.4);
   --blocked-border: rgba(245, 158, 11, 0.4);
   --dep-line: #f59e0b;
+  --dep-line-done: #8b8b96;
   --tl-today: rgba(59, 130, 246, 0.12);
   color-scheme: dark;
 }
@@ -1204,6 +1206,17 @@ dialog.modal-dialog::backdrop {
   gap: 8px;
   padding: 12px 20px 18px;
 }
+.search-dialog-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.search-dialog-bar .input {
+  border-color: transparent;
+  background: transparent;
+}
 .drawer-overlay {
   position: fixed;
   inset: 0;
@@ -1464,7 +1477,38 @@ dialog.modal-dialog::backdrop {
   display: grid;
   grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 14px;
-  align-items: start;
+  align-items: stretch; /* kolom pendek ikut setinggi kolom terpanjang: ruang kosongnya tetap area jatuh */
+}
+.board-col {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  outline: 2px dashed transparent;
+  outline-offset: 4px;
+  transition:
+    background-color var(--dur) var(--ease),
+    outline-color var(--dur) var(--ease);
+}
+.board-col.drop {
+  background: var(--primary-soft);
+  outline-color: var(--primary-border-strong);
+}
+.board-col.drop-denied {
+  background: var(--overdue-bg);
+  outline-color: var(--overdue-border);
+  cursor: no-drop;
+}
+.drop-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+  border: 1px solid var(--overdue-border);
+  color: var(--overdue);
+  font-size: var(--fs-xs);
 }
 .col-head {
   display: flex;
@@ -1488,17 +1532,12 @@ dialog.modal-dialog::backdrop {
   height: 26px;
 }
 .col-body {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 120px;
   border-radius: var(--radius);
-  transition: background 0.12s;
-}
-.col-body.drop {
-  background: var(--primary-soft);
-  outline: 2px dashed var(--primary-border-strong);
-  outline-offset: 2px;
 }
 .task-card {
   padding: 12px;
@@ -1805,6 +1844,15 @@ dialog.modal-dialog::backdrop {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.comment-box .input {
+  min-width: 0;
+  width: 0;
+}
+.comment-box .form-error {
+  flex-basis: 100%;
 }
 .section-title {
   font-size: var(--fs-xs);
@@ -2181,19 +2229,31 @@ dialog.modal-dialog::backdrop {
 .tl-links {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 0; /* di bawah bar (z-index 1), di atas kolom hari */
   pointer-events: none;
   overflow: visible;
+}
+.tl-links-live {
+  z-index: 3;
+}
+.tl-link path:first-child {
+  transition:
+    stroke-width var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease);
 }
 .tl-link-hit {
   fill: none;
   stroke: transparent;
-  stroke-width: 9;
+  stroke-width: 10;
   pointer-events: stroke;
   cursor: pointer;
 }
+.tl-link:hover path:first-child {
+  stroke-width: 3;
+}
 .tl-link-hit:hover {
   stroke: var(--focus-ring);
+  stroke-opacity: 0.35;
 }
 .tl-bar.editable {
   cursor: grab;
@@ -2648,12 +2708,62 @@ dialog.modal-dialog::backdrop {
   .modal-foot {
     flex-wrap: wrap;
   }
+  .modal-foot .btn,
+  .modal-head > .icon-btn {
+    min-height: 44px;
+  }
+  .modal-head > .icon-btn {
+    min-width: 44px;
+    flex-shrink: 0;
+  }
+  .modal-body .input,
+  .modal-body .select,
+  .modal-body .textarea {
+    font-size: 16px;
+  }
+  .search-dialog-bar .icon-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .search-dialog-bar .input {
+    min-height: 44px;
+    font-size: 16px;
+  }
   /* Urutan lapisan di ponsel: konten < navigasi bawah < laci/detail < dialog < menu < toast */
   .drawer {
     inset: 0;
     width: auto;
     border-radius: 0;
     z-index: 91;
+  }
+  .task-drawer {
+    top: var(--task-viewport-top, 0px);
+    bottom: auto;
+    height: var(--task-viewport-height, 100dvh);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .task-drawer .detail-head {
+    flex-shrink: 0;
+  }
+  .task-drawer .detail-head .tabs {
+    overflow-x: auto;
+  }
+  .task-drawer .detail-head .tab,
+  .task-drawer .comment-box .btn,
+  .task-drawer .comment-box .input {
+    min-height: 44px;
+  }
+  .task-drawer .detail-head .tab {
+    flex-shrink: 0;
+  }
+  .task-drawer .task-drawer-close {
+    width: 44px;
+    height: 44px;
+  }
+  .task-drawer .comment-box .input {
+    font-size: 16px;
   }
   .drawer-overlay {
     z-index: 90;
@@ -2856,15 +2966,19 @@ dialog.modal-dialog::backdrop {
   transform: scale(0.92);
 }
 
-/* Ikon chevron sidebar berputar halus saat proyek dibuka/ditutup */
+/* Submenu proyek di sidebar muncul dengan efek pop */
 .nav-sub {
-  animation: sub-in var(--dur) var(--ease);
-  transform-origin: top;
+  animation: nav-pop 0.2s var(--ease);
+  transform-origin: top left;
 }
-@keyframes sub-in {
+/* Menu sidebar yang dipilih: sorotan muncul dengan efek pop (tidak meluncur dari item sebelumnya) */
+.sidebar .nav-item.active {
+  animation: nav-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes nav-pop {
   from {
-    opacity: 0;
-    transform: translateY(-4px);
+    opacity: 0.4;
+    transform: scale(0.94);
   }
 }
 
@@ -2900,11 +3014,6 @@ dialog.modal-dialog::backdrop {
 .table tr.clickable td,
 .list-row.clickable {
   transition: background-color var(--dur-fast) var(--ease);
-}
-.col-body {
-  transition:
-    background-color var(--dur) var(--ease),
-    outline-color var(--dur) var(--ease);
 }
 
 /* Checkbox selesai: "pop" kecil saat dicentang */
@@ -2951,10 +3060,7 @@ svg circle {
   .content {
     view-transition-name: content;
   }
-  .sidebar .nav-item.active {
-    view-transition-name: nav-active;
-  }
-  .tabs .tab.active {
+  .content .tabs .tab.active {
     view-transition-name: tab-active;
   }
   .mobile-tabs .mobile-tab.active {
@@ -2989,7 +3095,6 @@ svg circle {
     transform: translateY(10px);
   }
 }
-::view-transition-group(nav-active),
 ::view-transition-group(tab-active),
 ::view-transition-group(mobile-tab-active),
 ::view-transition-group(bnav-active) {
@@ -3010,6 +3115,11 @@ svg circle {
 }
 .drawer {
   animation: drawer-in 0.22s var(--ease);
+}
+@media (max-width: 768px) {
+  .task-drawer {
+    animation: fade-in var(--dur-fast) var(--ease);
+  }
 }
 @keyframes drawer-in {
   from {

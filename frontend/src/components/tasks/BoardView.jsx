@@ -94,11 +94,24 @@ export function TaskCard({ task, onOpen, menuFor, draggable, onDragStart, onDrag
   );
 }
 
-// Board: tugas per status. Kartu dapat diseret antar kolom untuk mengubah status.
+// Tugas yang masih menunggu prasyarat tidak boleh dimulai atau diselesaikan (aturan yang sama
+// dengan backend), jadi kolom tujuan itu ditolak sejak kartu diseret, lengkap dengan alasannya.
+const deniedReason = (task, status) =>
+  task && task.status !== status && status !== 'TODO' && task.isBlocked && task.status !== 'DONE'
+    ? `Menunggu ${task.waitingFor.map((w) => w.title).join(', ')}. Selesaikan prasyarat dulu.`
+    : null;
+
+// Board: tugas per status. Kartu dapat diseret antar kolom untuk mengubah status;
+// seluruh kolom (judul, kartu, dan ruang kosong di bawahnya) menjadi area jatuh.
 export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, menuFor, onQuickAdd }) {
   const [dragId, setDragId] = useState(null);
   const [over, setOver] = useState(null);
   const bind = useMenuBinder();
+  const dragTask = dragId ? tasks.find((x) => x.id === dragId) : null;
+  const endDrag = () => {
+    setDragId(null);
+    setOver(null);
+  };
 
   return (
     <div className="board">
@@ -109,8 +122,32 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
           canCreate &&
             (() => [{ label: `New task in ${STATUS[status].label}…`, icon: Plus, onSelect: () => onCreate(status) }]),
         );
+        const denied = deniedReason(dragTask, status);
+        const isOver = over === status && dragTask && dragTask.status !== status;
         return (
-          <section key={status} aria-label={STATUS[status].label}>
+          <section
+            key={status}
+            aria-label={STATUS[status].label}
+            className={`board-col ${isOver ? (denied ? 'drop-denied' : 'drop') : ''}`}
+            onDragOver={(e) => {
+              if (!dragTask) return;
+              setOver(status);
+              if (denied) {
+                e.dataTransfer.dropEffect = 'none';
+                return;
+              }
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setOver((o) => (o === status ? null : o));
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragTask && dragTask.status !== status && !denied) onMove(dragTask, status);
+              endDrag();
+            }}
+          >
             <div className={`col-head bg-${status}`}>
               <StatusIcon status={status} />
               {STATUS[status].label}
@@ -125,21 +162,13 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
                 </button>
               )}
             </div>
-            <div
-              className={`col-body ${over === status ? 'drop' : ''}`}
-              {...colMenu}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setOver(status);
-              }}
-              onDragLeave={() => setOver(null)}
-              onDrop={() => {
-                const t = tasks.find((x) => x.id === dragId);
-                if (t && t.status !== status) onMove(t, status);
-                setOver(null);
-                setDragId(null);
-              }}
-            >
+            <div className="col-body" {...colMenu}>
+              {isOver && denied && (
+                <p className="drop-hint" role="status">
+                  <Lock size={13} />
+                  {denied}
+                </p>
+              )}
               {items.map((t) => (
                 <TaskCard
                   key={t.id}
@@ -148,11 +177,13 @@ export default function BoardView({ tasks, onOpen, onCreate, onMove, canCreate, 
                   menuFor={menuFor}
                   draggable
                   dragging={dragId === t.id}
-                  onDragStart={() => setDragId(t.id)}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setOver(null);
+                  onDragStart={(e) => {
+                    // Data wajib di beberapa browser (Firefox) agar seret benar-benar dimulai.
+                    e.dataTransfer.setData('text/plain', t.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDragId(t.id);
                   }}
+                  onDragEnd={endDrag}
                 />
               ))}
               {!items.length && (
