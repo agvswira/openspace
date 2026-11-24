@@ -22,8 +22,8 @@ describe('deleteBlocker', () => {
     const msg = deleteBlocker({ dependents: [{ title: 'BAB 2' }] });
     assert.match(msg, /prasyarat bagi: BAB 2/);
   });
-  test('tugas dari action item rapat ditolak', () => {
-    assert.match(deleteBlocker({ dependents: [], fromMeeting: { title: 'Rapat awal' } }), /Rapat awal/);
+  test('tugas dari action item rapat boleh dihapus', () => {
+    assert.equal(deleteBlocker({ dependents: [], fromMeeting: { title: 'Rapat awal' } }), null);
   });
 });
 

@@ -6,7 +6,6 @@ import {
   Calendar,
   Paperclip,
   MessageCircle,
-  Columns3,
   Trash2,
   EyeOff,
   X,
@@ -27,17 +26,8 @@ const COLUMNS = [
   { key: 'milestone', label: 'Milestone' },
   { key: 'activity', label: 'Activity' },
 ];
-const COLS_KEY = 'openspace-list-columns';
-
-function readCols() {
-  try {
-    const v = JSON.parse(localStorage.getItem(COLS_KEY));
-    if (Array.isArray(v)) return v;
-  } catch {
-    /* pakai bawaan */
-  }
-  return COLUMNS.map((c) => c.key);
-}
+// Semua kolom selalu ditampilkan.
+const cols = COLUMNS.map((c) => c.key);
 
 // Judul yang dapat diubah langsung: klik dua kali, Enter simpan, Esc batal.
 // Klik sekali pada judul tetap membuka detail, tetapi ditunda sebentar (250 ms) agar klik kedua
@@ -90,22 +80,13 @@ function InlineTitle({ task, onRename, canEdit, onOpen }) {
 }
 
 // List: tugas dikelompokkan per status dalam tabel berkolom sejajar.
-// Fitur: pilih banyak tugas (aksi massal), atur kolom, ubah judul langsung, tambah cepat.
+// Fitur: pilih banyak tugas (aksi massal), ubah judul langsung, tambah cepat.
 export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, onQuickAdd, bulk }) {
   const [collapsed, setCollapsed] = useState({ DONE: true });
-  const [cols, setColsState] = useState(readCols);
   const [selected, setSelected] = useState([]);
   const bind = useMenuBinder();
   const toggle = (status) => setCollapsed((c) => ({ ...c, [status]: !c[status] }));
   const show = (k) => cols.includes(k);
-  const setCols = (next) => {
-    setColsState(next);
-    try {
-      localStorage.setItem(COLS_KEY, JSON.stringify(next));
-    } catch {
-      /* abaikan */
-    }
-  };
   const colSpan = 3 + cols.length;
 
   // Pilihan hanya untuk tugas yang terlihat: tidak terfilter/terhapus dan grupnya tidak ditutup,
@@ -123,43 +104,6 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
 
   return (
     <>
-      <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
-        <Menu
-          width={200}
-          trigger={({ toggle: t }) => (
-            <button className="btn btn-sm" onClick={t}>
-              <Columns3 size={14} />
-              Columns · {cols.length}/{COLUMNS.length}
-            </button>
-          )}
-        >
-          <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="xs muted">Show columns</div>
-            {COLUMNS.map((c) => (
-              <label key={c.key} className="check">
-                <input
-                  type="checkbox"
-                  checked={show(c.key)}
-                  onChange={(e) =>
-                    setCols(
-                      e.target.checked
-                        ? COLUMNS.map((x) => x.key).filter((k) => k === c.key || cols.includes(k))
-                        : cols.filter((k) => k !== c.key),
-                    )
-                  }
-                />
-                {c.label}
-              </label>
-            ))}
-            {cols.length < COLUMNS.length && (
-              <button className="btn btn-sm" onClick={() => setCols(COLUMNS.map((c) => c.key))}>
-                Show all
-              </button>
-            )}
-          </div>
-        </Menu>
-      </div>
-
       <div className="card" style={{ overflow: 'hidden' }}>
         <div className="table-scroll">
           <table className="table">

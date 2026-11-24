@@ -137,7 +137,7 @@ function serializeMeeting(m) {
     endTime: m.endTime,
     location: m.location,
     notes: m.notes,
-    participants: m.participants.map((p) => publicUser(p.user)),
+    participants: m.participants.map((p) => ({ ...publicUser(p.user), attendance: p.attendance })),
     actionItems: m.actionItems.map((a) => ({
       id: a.id,
       title: a.title,
@@ -214,10 +214,13 @@ meetingsRouter.patch('/:meetingId', validate(meetingSchema.innerType().partial()
   if (start >= end) throw badRequest('Waktu selesai harus setelah waktu mulai.');
   await assertMembers(m.projectId, participantIds);
   const updated = await prisma.$transaction(async (tx) => {
+    // Peserta yang tetap ikut tidak dihapus agar catatan kehadirannya tidak hilang.
     if (participantIds) {
-      await tx.meetingParticipant.deleteMany({ where: { meetingId: m.id } });
+      const next = new Set(participantIds);
+      const current = new Set(m.participants.map((p) => p.userId));
+      await tx.meetingParticipant.deleteMany({ where: { meetingId: m.id, userId: { notIn: [...next] } } });
       await tx.meetingParticipant.createMany({
-        data: [...new Set(participantIds)].map((userId) => ({ meetingId: m.id, userId })),
+        data: [...next].filter((id) => !current.has(id)).map((userId) => ({ meetingId: m.id, userId })),
       });
     }
     return tx.meeting.update({ where: { id: m.id }, data, include: meetingInclude });
@@ -228,11 +231,34 @@ meetingsRouter.patch('/:meetingId', validate(meetingSchema.innerType().partial()
 meetingsRouter.delete('/:meetingId', async (req, res) => {
   const { m, access } = await meetingContext(req);
   if (!access.can('MANAGE_MEETINGS')) throw forbidden('Role Anda tidak memiliki izin Manage meetings.');
-  if (m.actionItems.some((a) => a.task)) {
-    throw conflict('Rapat ini memiliki action item yang sudah menjadi tugas sehingga tidak dapat dihapus.');
-  }
+  // Tugas yang dulu dibuat dari action item tetap ada; hanya tautannya ke rapat yang dilepas.
   await prisma.meeting.delete({ where: { id: m.id } });
   res.status(204).end();
+});
+
+// Kehadiran peserta: satu atau beberapa peserta sekaligus (mis. "Mark all present").
+const ATTENDANCE = ['PRESENT', 'LATE', 'EXCUSED', 'ABSENT'];
+const attendanceSchema = z.object({
+  entries: z
+    .array(z.object({ userId: z.string(), attendance: z.enum(ATTENDANCE).nullable() }))
+    .min(1)
+    .max(500),
+});
+
+meetingsRouter.put('/:meetingId/attendance', validate(attendanceSchema), async (req, res) => {
+  const { m, access } = await meetingContext(req);
+  if (!access.can('MANAGE_MEETINGS')) throw forbidden('Role Anda tidak memiliki izin Manage meetings.');
+  const ids = new Set(m.participants.map((p) => p.userId));
+  if (req.body.entries.some((e) => !ids.has(e.userId))) throw badRequest('Kehadiran hanya untuk peserta rapat ini.');
+  await prisma.$transaction(
+    req.body.entries.map((e) =>
+      prisma.meetingParticipant.update({
+        where: { meetingId_userId: { meetingId: m.id, userId: e.userId } },
+        data: { attendance: e.attendance },
+      }),
+    ),
+  );
+  res.json(serializeMeeting((await meetingContext(req)).m));
 });
 
 const actionItemSchema = z.object({
