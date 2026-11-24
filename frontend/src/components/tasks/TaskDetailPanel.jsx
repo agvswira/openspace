@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronLeft,
@@ -37,6 +37,17 @@ import { Avatar, ConfirmDialog, FormError, LoadingBlock, Menu } from '../ui';
 import { STATUS, STATUS_ORDER, PriorityFlag, StatusBadge, StatusIcon, displayState } from '../../lib/status';
 import { fmtLong, fmtShort, timeAgo } from '../../lib/format';
 import TaskFormModal from './TaskFormModal';
+
+const DETAIL_TABS = ['details', 'comments', 'links'];
+
+function safeHref(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
 
 export function useCan(projectId) {
   const { data: project } = useProject(projectId);
@@ -89,6 +100,42 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [rejected, setRejected] = useState(null);
+  const drawerRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const tabBaseId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const prevFocus = document.activeElement;
+    drawerRef.current?.focus({ preventScroll: true });
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (document.querySelector('dialog[open]')) return;
+      onCloseRef.current?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      if (prevFocus?.focus && document.contains(prevFocus)) prevFocus.focus({ preventScroll: true });
+    };
+  }, []);
+
+  const onTabKeyDown = (e) => {
+    const idx = DETAIL_TABS.indexOf(tab);
+    let next = -1;
+    if (e.key === 'ArrowRight') next = (idx + 1) % DETAIL_TABS.length;
+    else if (e.key === 'ArrowLeft') next = (idx - 1 + DETAIL_TABS.length) % DETAIL_TABS.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = DETAIL_TABS.length - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    const nextKey = DETAIL_TABS[next];
+    setTab(nextKey);
+    document.getElementById(`${tabBaseId}-tab-${nextKey}`)?.focus();
+  };
 
   const invalidate = projectTaskKeys(projectId);
   const update = useApiMutation((body) => api.patch(`/tasks/${taskId}`, body), {
@@ -107,7 +154,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
     return (
       <TaskDrawerLayer>
         <div className="drawer-overlay" onClick={onClose} />
-        <aside className="drawer task-drawer" aria-label="Detail tugas" role="dialog">
+        <aside ref={drawerRef} tabIndex={-1} className="drawer task-drawer" aria-label="Detail tugas" role="dialog">
           <div className="detail-head">
             <CloseTaskButton onClose={onClose} />
           </div>
@@ -133,7 +180,13 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
   return (
     <TaskDrawerLayer>
       <div className="drawer-overlay" onClick={onClose} />
-      <aside className="drawer task-drawer" role="dialog" aria-label={`Detail tugas ${task.title}`}>
+      <aside
+        ref={drawerRef}
+        tabIndex={-1}
+        className="drawer task-drawer"
+        role="dialog"
+        aria-label={`Detail tugas ${task.title}`}
+      >
         <div className="detail-head">
           <div className="row-between">
             <span className="mono muted">
@@ -141,6 +194,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
             </span>
             <div className="row" style={{ gap: 2 }}>
               <button
+                type="button"
                 className="icon-btn"
                 aria-label="Salin tautan"
                 onClick={() => {
@@ -152,16 +206,21 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
               </button>
               <Menu
                 trigger={({ toggle }) => (
-                  <button className="icon-btn" onClick={toggle} aria-label="Menu tugas">
+                  <button type="button" className="icon-btn" onClick={toggle} aria-label="Menu tugas">
                     <MoreHorizontal size={16} />
                   </button>
                 )}
               >
-                <button className="menu-item" disabled={!canEditAll} onClick={() => setEditing(true)}>
+                <button type="button" className="menu-item" disabled={!canEditAll} onClick={() => setEditing(true)}>
                   <Pencil size={14} />
                   Edit task
                 </button>
-                <button className="menu-item danger" disabled={!canEditAll} onClick={() => setConfirmDelete(true)}>
+                <button
+                  type="button"
+                  className="menu-item danger"
+                  disabled={!canEditAll}
+                  onClick={() => setConfirmDelete(true)}
+                >
                   <Trash2 size={14} />
                   Delete task
                 </button>
@@ -169,7 +228,7 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
               <CloseTaskButton onClose={onClose} />
             </div>
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 600, margin: '12px 0 6px' }}>{task.title}</h2>
+          <h2 style={{ fontSize: '1.375rem', fontWeight: 600, margin: '12px 0 6px' }}>{task.title}</h2>
           {task.isBlocked && task.status !== 'DONE' && (
             <div className="st-BLOCKED sm row" style={{ marginBottom: 6 }}>
               <Lock size={13} />
@@ -182,10 +241,20 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
               Overdue since {fmtShort(task.dueDate)}
             </div>
           )}
-          <div className="tabs" style={{ marginTop: 10 }} role="tablist">
+          <div
+            className="tabs"
+            style={{ marginTop: 10 }}
+            role="tablist"
+            aria-label="Detail tugas"
+            onKeyDown={onTabKeyDown}
+          >
             <button
+              type="button"
+              id={`${tabBaseId}-tab-details`}
               role="tab"
               aria-selected={tab === 'details'}
+              aria-controls={`${tabBaseId}-panel-details`}
+              tabIndex={tab === 'details' ? 0 : -1}
               className={`tab ${tab === 'details' ? 'active' : ''}`}
               onClick={() => setTab('details')}
             >
@@ -193,8 +262,12 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
               Details
             </button>
             <button
+              type="button"
+              id={`${tabBaseId}-tab-comments`}
               role="tab"
               aria-selected={tab === 'comments'}
+              aria-controls={`${tabBaseId}-panel-comments`}
+              tabIndex={tab === 'comments' ? 0 : -1}
               className={`tab ${tab === 'comments' ? 'active' : ''}`}
               onClick={() => setTab('comments')}
             >
@@ -202,8 +275,12 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
               Comments · {task.commentCount}
             </button>
             <button
+              type="button"
+              id={`${tabBaseId}-tab-links`}
               role="tab"
               aria-selected={tab === 'links'}
+              aria-controls={`${tabBaseId}-panel-links`}
+              tabIndex={tab === 'links' ? 0 : -1}
               className={`tab ${tab === 'links' ? 'active' : ''}`}
               onClick={() => setTab('links')}
             >
@@ -214,7 +291,12 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
         </div>
 
         {tab === 'details' && (
-          <>
+          <div
+            id={`${tabBaseId}-panel-details`}
+            role="tabpanel"
+            aria-labelledby={`${tabBaseId}-tab-details`}
+            style={{ display: 'contents' }}
+          >
             <div className="detail-body" style={{ paddingTop: 14 }}>
               <dl className="prop-grid">
                 <dt>
@@ -327,18 +409,29 @@ export default function TaskDetailPanel({ taskId, projectId, onClose }) {
               <LatestComments taskId={task.id} />
             </div>
             <CommentBox taskId={task.id} projectId={projectId} />
-          </>
+          </div>
         )}
         {tab === 'comments' && (
-          <>
+          <div
+            id={`${tabBaseId}-panel-comments`}
+            role="tabpanel"
+            aria-labelledby={`${tabBaseId}-tab-comments`}
+            style={{ display: 'contents' }}
+          >
             <div className="detail-body" style={{ paddingTop: 14 }}>
               <CommentList taskId={task.id} />
             </div>
             <CommentBox taskId={task.id} projectId={projectId} />
-          </>
+          </div>
         )}
         {tab === 'links' && (
-          <div className="detail-body" style={{ paddingTop: 14 }}>
+          <div
+            id={`${tabBaseId}-panel-links`}
+            role="tabpanel"
+            aria-labelledby={`${tabBaseId}-tab-links`}
+            className="detail-body"
+            style={{ paddingTop: 14 }}
+          >
             <LinksTab
               task={task}
               projectId={projectId}
@@ -589,25 +682,39 @@ function LinksTab({ task, projectId, canManage }) {
         <p className="sm faint">Belum ada link hasil kerja.</p>
       ) : (
         <div className="card">
-          {links.map((l) => (
-            <div key={l.id} className="list-row">
-              <Link2 size={15} className="faint" />
-              <div className="grow" style={{ minWidth: 0 }}>
-                <a href={l.url} target="_blank" rel="noreferrer" className="sm row" style={{ fontWeight: 500 }}>
-                  {l.title}
-                  <ExternalLink size={12} className="faint" />
-                </a>
-                <div className="xs muted truncate">
-                  {l.url} · {l.addedBy.name}
+          {links.map((l) => {
+            const href = safeHref(l.url);
+            return (
+              <div key={l.id} className="list-row">
+                <Link2 size={15} className="faint" />
+                <div className="grow" style={{ minWidth: 0 }}>
+                  {href ? (
+                    <a href={href} target="_blank" rel="noreferrer" className="sm row" style={{ fontWeight: 500 }}>
+                      {l.title}
+                      <ExternalLink size={12} className="faint" />
+                    </a>
+                  ) : (
+                    <span className="sm row" style={{ fontWeight: 500 }}>
+                      {l.title}
+                    </span>
+                  )}
+                  <div className="xs muted truncate">
+                    {l.url} · {l.addedBy.name}
+                  </div>
                 </div>
+                {canManage && (
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={`Hapus link ${l.title}`}
+                    onClick={() => del.mutate(l.id)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
-              {canManage && (
-                <button className="icon-btn" aria-label={`Hapus link ${l.title}`} onClick={() => del.mutate(l.id)}>
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

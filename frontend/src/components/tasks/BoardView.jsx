@@ -19,17 +19,26 @@ export function TaskCard({ task, onOpen, menuFor, draggable, onDragStart, onDrag
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      role="button"
       tabIndex={0}
       aria-label={task.title}
       {...menu}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return;
-        if (e.key === 'Enter') onOpen(task.id);
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onOpen(task.id);
+        }
+        if (e.key === ' ') e.preventDefault();
         if (e.key === 'Delete' && menuFor) {
           const del = menuFor(task).find((i) => i.label === 'Delete task');
           if (del && !del.disabled) del.onSelect();
         }
         menu.onKeyDown?.(e);
+      }}
+      onKeyUp={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === ' ') onOpen(task.id);
       }}
     >
       <div className="row-between">
