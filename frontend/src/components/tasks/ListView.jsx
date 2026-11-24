@@ -49,12 +49,17 @@ function InlineTitle({ task, onRename, canEdit, onOpen }) {
   useEffect(() => () => clearTimeout(clickTimer.current), []);
   if (!editing)
     return (
-      <div
+      <button
+        type="button"
+        className="task-title-btn"
         style={{ fontWeight: 500 }}
         title={canEdit ? 'Double-click to rename' : undefined}
         onClick={(e) => {
-          if (!canEdit) return; // tanpa izin edit: klik diteruskan ke baris (langsung buka detail)
           e.stopPropagation();
+          if (!canEdit) {
+            onOpen();
+            return;
+          }
           clearTimeout(clickTimer.current);
           if (e.detail >= 2) {
             setValue(task.title);
@@ -65,7 +70,7 @@ function InlineTitle({ task, onRename, canEdit, onOpen }) {
         }}
       >
         {task.title}
-      </div>
+      </button>
     );
   const save = async () => {
     setEditing(false);
@@ -81,7 +86,11 @@ function InlineTitle({ task, onRename, canEdit, onOpen }) {
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Enter') save();
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+          save();
+        }
         if (e.key === 'Escape') setEditing(false);
       }}
       onBlur={save}
@@ -161,11 +170,14 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
-        <div className="table-scroll">
+        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="tasks-table-caption">
           <table className="table">
+            <caption id="tasks-table-caption" className="sr-only">
+              Daftar tugas proyek
+            </caption>
             <thead>
               <tr>
-                <th style={{ width: 36 }}>
+                <th scope="col" style={{ width: 36 }}>
                   <input
                     type="checkbox"
                     aria-label="Pilih semua tugas"
@@ -178,14 +190,16 @@ export default function ListView({ tasks, onOpen, onCreate, canCreate, menuFor, 
                     }
                   />
                 </th>
-                <th style={{ width: '34%' }}>Task</th>
-                {show('status') && <th>Status</th>}
-                {show('assignees') && <th>Assignees</th>}
-                {show('due') && <th>Due date</th>}
-                {show('priority') && <th>Priority</th>}
-                {show('milestone') && <th>Milestone</th>}
-                {show('activity') && <th>Activity</th>}
-                <th style={{ width: 44 }} aria-label="Aksi" />
+                <th scope="col" style={{ width: '34%' }}>
+                  Task
+                </th>
+                {show('status') && <th scope="col">Status</th>}
+                {show('assignees') && <th scope="col">Assignees</th>}
+                {show('due') && <th scope="col">Due date</th>}
+                {show('priority') && <th scope="col">Priority</th>}
+                {show('milestone') && <th scope="col">Milestone</th>}
+                {show('activity') && <th scope="col">Activity</th>}
+                <th scope="col" style={{ width: 44 }} aria-label="Aksi" />
               </tr>
             </thead>
             {STATUS_ORDER.map((status) => {

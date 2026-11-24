@@ -37,31 +37,55 @@ export default function QuickAdd({ onSubmit, label = 'Add task', className = '' 
     );
 
   return (
-    <div className={`quick-add ${className}`} onClick={(e) => e.stopPropagation()}>
-      <input
-        ref={inputRef}
-        className="input"
-        autoFocus
-        placeholder="Task title, then Enter"
-        value={title}
-        disabled={busy}
-        aria-label="Judul tugas baru"
-        aria-invalid={!!error}
-        onChange={(e) => {
-          setTitle(e.target.value);
-          setError('');
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') submit();
-          if (e.key === 'Escape') {
-            setOpen(false);
-            setTitle('');
+    <form
+      className={`quick-add ${className}`}
+      onClick={(e) => e.stopPropagation()}
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget) && !title.trim()) setOpen(false);
+      }}
+    >
+      <div className="quick-add-row">
+        <input
+          ref={inputRef}
+          className="input grow"
+          name="quick-task-title"
+          autoFocus
+          enterKeyHint="done"
+          placeholder="Task title, then Enter"
+          value={title}
+          disabled={busy}
+          aria-label="Judul tugas baru"
+          aria-invalid={!!error}
+          onChange={(e) => {
+            setTitle(e.target.value);
             setError('');
-          }
-        }}
-        onBlur={() => !title.trim() && setOpen(false)}
-      />
-      {error && <div className="xs st-OVERDUE">{error}</div>}
-    </div>
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+              submit();
+            }
+            if (e.key === 'Escape') {
+              setOpen(false);
+              setTitle('');
+              setError('');
+            }
+          }}
+        />
+        <button type="submit" className="btn btn-sm btn-primary" disabled={busy || !title.trim()}>
+          Add
+        </button>
+      </div>
+      {error && (
+        <div className="xs st-OVERDUE" role="alert">
+          {error}
+        </div>
+      )}
+    </form>
   );
 }

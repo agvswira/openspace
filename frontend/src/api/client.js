@@ -1,12 +1,17 @@
 import axios from 'axios';
+import { IS_DEMO } from '../demo/demoMode';
 
 const TOKEN_KEY = 'openspace.token';
 
-export const tokenStore = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (t) => localStorage.setItem(TOKEN_KEY, t),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
-};
+// Mode demo (iframe di landing page) tidak pernah membaca atau mengubah token sungguhan,
+// karena localStorage dipakai bersama dengan halaman induknya.
+export const tokenStore = IS_DEMO
+  ? { get: () => 'demo', set: () => {}, clear: () => {} }
+  : {
+      get: () => localStorage.getItem(TOKEN_KEY),
+      set: (t) => localStorage.setItem(TOKEN_KEY, t),
+      clear: () => localStorage.removeItem(TOKEN_KEY),
+    };
 
 export const api = axios.create({ baseURL: '/api' });
 

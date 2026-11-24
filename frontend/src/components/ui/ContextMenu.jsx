@@ -138,6 +138,8 @@ export function MoreButton({ getItems, label = 'Menu', size = 16, className = 'i
   );
 }
 
+const supportsPopover = typeof HTMLElement !== 'undefined' && Object.hasOwn(HTMLElement.prototype, 'popover');
+
 function MenuSurface({ x, y, items: rawItems, onClose, nested = false, parentRef }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ left: x, top: y, ready: false });
@@ -150,14 +152,28 @@ function MenuSurface({ x, y, items: rawItems, onClose, nested = false, parentRef
     .map((it, i) => (!it.separator && !it.heading && !it.disabled ? i : -1))
     .filter((i) => i >= 0);
 
-  // Geser menu agar tetap di dalam layar.
+  // Geser menu agar tetap di dalam layar, lalu promosikan ke Top Layer bila didukung.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) return undefined;
+    if (supportsPopover) {
+      try {
+        if (!el.matches(':popover-open')) el.showPopover();
+      } catch {
+        /* abaikan bila sudah terbuka */
+      }
+    }
     if (sheet) {
-      // Posisi panel diatur CSS; cukup pindahkan fokus ke menu.
       el.focus({ preventScroll: true });
-      return;
+      return () => {
+        if (supportsPopover && el.matches?.(':popover-open')) {
+          try {
+            el.hidePopover();
+          } catch {
+            /* abaikan */
+          }
+        }
+      };
     }
     const { offsetWidth: w, offsetHeight: h } = el;
     let left = x;
@@ -166,6 +182,15 @@ function MenuSurface({ x, y, items: rawItems, onClose, nested = false, parentRef
     if (top + h > window.innerHeight - 8) top = Math.max(8, window.innerHeight - h - 8);
     setPos({ left: Math.max(8, left), top, ready: true });
     el.focus({ preventScroll: true });
+    return () => {
+      if (supportsPopover && el.matches?.(':popover-open')) {
+        try {
+          el.hidePopover();
+        } catch {
+          /* abaikan */
+        }
+      }
+    };
   }, [x, y, nested, parentRef, sheet]);
 
   useEffect(() => {
@@ -232,6 +257,7 @@ function MenuSurface({ x, y, items: rawItems, onClose, nested = false, parentRef
         className={`ctx-menu popover ${sheet ? 'sheet' : ''}`}
         role="menu"
         tabIndex={-1}
+        {...(supportsPopover ? { popover: 'manual' } : {})}
         style={
           sheet
             ? undefined
